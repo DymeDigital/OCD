@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Standard Order — Obsessive Cupcake Disorder</title>
+<meta name="description" content="Begin a standard order entry: cakes, cupcakes, and signature confections.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,540;9..144,560;9..144,700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/ledger.css">
+</head>
+<body>
+<div class="site-shell">
+
+  <header class="ledger-header">
+    <a class="ledger-header__mark" href="/index.html">
+      <img class="ledger-header__roundel" src="/assets/img/ocd-logo.png" alt="Obsessive Cupcake Disorder — it will have you in a frenzy">
+      <span class="ledger-header__wordmark">
+        <span class="name">Obsessive Cupcake Disorder</span>
+        <span class="tagline">It will have you in a frenzy</span>
+      </span>
+    </a>
+    <span class="ledger-header__meta">DURBAN, SOUTH&nbsp;AFRICA</span>
+  </header>
+
+  <nav class="ledger-nav" aria-label="Primary">
+    <ul style="list-style:none;margin:0;padding:0;display:contents;">
+      <li class="ledger-nav__item"><a class="ledger-nav__link" href="/index.html"><span class="label">Home</span></a></li>
+      <li class="ledger-nav__item"><a class="ledger-nav__link" href="/menu.html"><span class="label">Menu</span></a></li>
+      <li class="ledger-nav__item"><a class="ledger-nav__link" href="/gallery.html"><span class="label">Gallery</span></a></li>
+      <li class="ledger-nav__item"><a class="ledger-nav__link" href="/about.html"><span class="label">About</span></a></li>
+      <li class="ledger-nav__item"><a class="ledger-nav__link" href="/order.html" aria-current="page"><span class="label">Order</span></a></li>
+      <li class="ledger-nav__item"><a class="ledger-nav__link" href="/wedding.html"><span class="label">Wedding</span></a></li>
+    </ul>
+  </nav>
+
+  <main>
+
+    <section class="leaf">
+      <div class="leaf__inner">
+        <p class="leaf-kicker">Leaf IV — Standard Order Entry</p>
+        <h1 class="display" style="font-size:clamp(2.25rem,5vw,3.75rem);">Begin an entry.</h1>
+        <p class="body-copy body-copy--muted" style="font-size:1.0625rem;margin-top:var(--space-md);max-width:70ch;">
+          For cakes, cupcakes, and signature confections. Planning a wedding cake?
+          Use the separate <a href="/wedding.html" style="text-decoration:underline;color:var(--ink);">Wedding Inquiry</a> —
+          it runs under its own contract and terms.
+        </p>
+      </div>
+    </section>
+
+    <!-- TERMS -->
+    <section class="leaf reveal">
+      <div class="leaf__inner">
+        <p class="leaf-kicker">Terms of This Entry</p>
+        <div class="ledger-table--scroll">
+          <table class="ledger-table">
+            <tbody>
+              <tr><td class="title" style="width:38%;">Lead time</td><td>Minimum 14 days. Contact us directly for urgent or short-notice requests.</td></tr>
+              <tr><td class="title">Confirmation</td><td>Full payment is required to confirm an order. 50% of payment serves as a non-refundable deposit.</td></tr>
+              <tr><td class="title">Cancellations</td><td>No cash refunds. Cancellations are issued an OCD Credit Voucher (valid 12 months), graded by notice: 8+ days before collection/delivery — 50% credit; 4–7 days — 25% credit; 0–3 days — no credit issued.</td></tr>
+              <tr><td class="title">Delivery</td><td>Charged by distance from our premises; quoted once your address is confirmed.</td></tr>
+              <tr><td class="title">Confirming payment</td><td>Proof of payment is sent via email or WhatsApp — banking details are shared once your entry is quoted and confirmed.</td></tr>
+              <tr><td class="title">Product variation</td><td>Finished products may differ slightly from reference or inspiration images.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- FORM -->
+    <section class="leaf reveal">
+      <div class="leaf__inner">
+
+        <form data-ledger-form="#standardConfirm" novalidate>
+
+          <div class="form-section">
+            <h2 class="title form-section__title">Customer Details</h2>
+            <div class="field-grid">
+              <div class="field">
+                <label class="field-required" for="s-name">Full Name</label>
+                <input type="text" id="s-name" name="name" required>
+                <span class="error-note">Required — we can't quote without a name to attach this entry to.</span>
+              </div>
+              <div class="field">
+                <label class="field-required" for="s-contact">Contact Number</label>
+                <input type="tel" id="s-contact" name="contact" required>
+                <span class="error-note">Required — this is how we confirm your quote.</span>
+              </div>
+              <div class="field">
+                <label class="field-required" for="s-date">Collection / Delivery / Event Date</label>
+                <input type="date" id="s-date" name="event_date" required>
+                <span class="error-note">Required — remember, entries need 14 days' notice.</span>
+              </div>
+              <div class="field">
+                <label for="s-address">Delivery Address <span class="hint">(if applicable)</span></label>
+                <input type="text" id="s-address" name="address">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2 class="title form-section__title">Cake Details</h2>
+            <div class="field-grid">
+              <div class="field">
+                <label for="s-size">Cake Size / Tier Option</label>
+                <select id="s-size" name="size">
+                  <option value="">Not sure — advise me</option>
+                  <option>Single Tier</option>
+                  <option>Two Tier</option>
+                  <option>Three Tier</option>
+                  <option>Four Tier</option>
+                  <option>Five Tier</option>
+                  <option>Six Tier</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="s-flavour">Flavour</label>
+                <select id="s-flavour" name="flavour">
+                  <option value="">Not sure — advise me</option>
+                  <option>Belgian Chocolate, Ganache Filling</option>
+                  <option>Vanilla Bean, Caramel Ganache Filling</option>
+                  <option>Lemon &amp; Blueberry, Cream Cheese Filling</option>
+                  <option>Toasted Nut, Cream Cheese Filling</option>
+                  <option>Orange, Almonds &amp; White Chocolate Filling</option>
+                  <option>Roasted Nougat, White Chocolate Filling</option>
+                  <option>Salted Caramel</option>
+                  <option>Raspberry, White Chocolate Filling</option>
+                  <option>Cookies &amp; Cream</option>
+                  <option>Red Velvet, Cream Cheese Filling</option>
+                  <option>Spiced Carrot, Pecan &amp; Walnut</option>
+                  <option>Fruit Cake, Cream Cheese Filling</option>
+                  <option>Matcha, White Chocolate Ganache Filling</option>
+                  <option>Espresso, White Chocolate &amp; Biscoff Filling</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="s-shape">Cake Shape</label>
+                <select id="s-shape" name="shape">
+                  <option value="">Round</option>
+                  <option>Square</option>
+                  <option>Hexagon</option>
+                  <option>Other — describe below</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="field field--full mt-lg">
+              <label for="s-theme">Theme / Design Description <span class="hint">for bespoke designs</span></label>
+              <textarea id="s-theme" name="theme" placeholder="Occasion, theme, colours, and any inspiration images you'll send separately."></textarea>
+            </div>
+            <div class="field field--full mt-lg">
+              <label for="s-addons">Custom Topper or Add-Ons Needed?</label>
+              <textarea id="s-addons" name="addons"></textarea>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2 class="title form-section__title">Cupcake Order <span class="hint">Swiss meringue buttercream, from R450 / dozen</span></h2>
+            <div class="field-grid">
+              <div class="field">
+                <label for="s-cupcake-qty">Quantity <span class="hint">(dozens)</span></label>
+                <input type="number" id="s-cupcake-qty" name="cupcake_qty" min="0" step="1">
+              </div>
+              <div class="field">
+                <label for="s-cupcake-flavour">Flavour(s)</label>
+                <input type="text" id="s-cupcake-flavour" name="cupcake_flavour">
+              </div>
+              <div class="field field--full">
+                <label for="s-cupcake-theme">Design / Theme <span class="hint">if custom</span></label>
+                <input type="text" id="s-cupcake-theme" name="cupcake_theme">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2 class="title form-section__title">Signature Confections</h2>
+            <div class="tick-list">
+
+              <label class="tick-row">
+                <input type="checkbox" name="conf_pops">
+                <span class="tick-box" aria-hidden="true"></span>
+                <span class="tick-row__body"><span class="title">Chocolate Cake Pops</span><span class="desc">White chocolate dipped</span></span>
+                <span class="tick-row__price ledger-figure">from R600 / 12</span>
+                <span class="tick-row__extra"><input type="text" placeholder="Colour &amp; theme" aria-label="Cake pop colour and theme"></span>
+              </label>
+
+              <label class="tick-row">
+                <input type="checkbox" name="conf_cakesicles">
+                <span class="tick-box" aria-hidden="true"></span>
+                <span class="tick-row__body"><span class="title">Chocolate Cakesicles</span><span class="desc">White chocolate coated</span></span>
+                <span class="tick-row__price ledger-figure">from R750 / 12</span>
+                <span class="tick-row__extra"><input type="text" placeholder="Colour &amp; theme" aria-label="Cakesicle colour and theme"></span>
+              </label>
+
+              <label class="tick-row">
+                <input type="checkbox" name="conf_macarons">
+                <span class="tick-box" aria-hidden="true"></span>
+                <span class="tick-row__body"><span class="title">French Macarons</span><span class="desc">One colour per set of 12; bespoke flavour &amp; theme available</span></span>
+                <span class="tick-row__price ledger-figure">from R350 / 12</span>
+                <span class="tick-row__extra"><input type="text" placeholder="Colour, flavour &amp; theme" aria-label="Macaron colour flavour and theme"></span>
+              </label>
+
+              <label class="tick-row">
+                <input type="checkbox" name="conf_cookies">
+                <span class="tick-box" aria-hidden="true"></span>
+                <span class="tick-row__body"><span class="title">Decorated Sugar Cookies</span><span class="desc">Hand-decorated with royal icing</span></span>
+                <span class="tick-row__price ledger-figure">from R750 / 12</span>
+                <span class="tick-row__extra"><input type="text" placeholder="Theme, colour &amp; personalisation" aria-label="Sugar cookie theme colour and personalisation"></span>
+              </label>
+
+              <label class="tick-row">
+                <input type="checkbox" name="conf_orange">
+                <span class="tick-box" aria-hidden="true"></span>
+                <span class="tick-row__body"><span class="title">Orange &amp; Coconut Squares</span></span>
+                <span class="tick-row__price ledger-figure">R400 / 12</span>
+              </label>
+
+              <label class="tick-row">
+                <input type="checkbox" name="conf_peppermint">
+                <span class="tick-box" aria-hidden="true"></span>
+                <span class="tick-row__body"><span class="title">Caramel &amp; Peppermint Cups</span></span>
+                <span class="tick-row__price ledger-figure">R600 / 20</span>
+              </label>
+
+              <label class="tick-row">
+                <input type="checkbox" name="conf_mousse">
+                <span class="tick-box" aria-hidden="true"></span>
+                <span class="tick-row__body"><span class="title">Belgian Chocolate Mousse</span></span>
+                <span class="tick-row__price ledger-figure">R800 / 20</span>
+              </label>
+
+              <label class="tick-row">
+                <input type="checkbox" name="conf_cheesecake_whole">
+                <span class="tick-box" aria-hidden="true"></span>
+                <span class="tick-row__body"><span class="title">Baked Cheesecake (whole)</span></span>
+                <span class="tick-row__price ledger-figure">from R650</span>
+                <span class="tick-row__extra">
+                  <select aria-label="Cheesecake flavour">
+                    <option>Vanilla</option><option>Biscoff</option><option>Blueberry</option><option>Lemon</option>
+                  </select>
+                </span>
+              </label>
+
+              <label class="tick-row">
+                <input type="checkbox" name="conf_cheesecake_ind">
+                <span class="tick-box" aria-hidden="true"></span>
+                <span class="tick-row__body"><span class="title">Individual Cheesecakes</span></span>
+                <span class="tick-row__price ledger-figure">R700 / 20</span>
+              </label>
+
+              <label class="tick-row">
+                <input type="checkbox" name="conf_tartlets">
+                <span class="tick-box" aria-hidden="true"></span>
+                <span class="tick-row__body"><span class="title">Assorted Tartlets</span><span class="desc">One flavour per set of 20</span></span>
+                <span class="tick-row__price ledger-figure">R500 / 20</span>
+                <span class="tick-row__extra"><input type="text" placeholder="Preferred tartlet flavour(s)" aria-label="Preferred tartlet flavours"></span>
+              </label>
+
+              <label class="tick-row">
+                <input type="checkbox" name="conf_scones">
+                <span class="tick-box" aria-hidden="true"></span>
+                <span class="tick-row__body"><span class="title">English Scones</span><span class="desc">Strawberry compote &amp; cream</span></span>
+                <span class="tick-row__price ledger-figure">R450 / 24 halves</span>
+              </label>
+
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2 class="title form-section__title">Additional Notes</h2>
+            <div class="field field--full">
+              <label for="s-notes">Special Instructions</label>
+              <textarea id="s-notes" name="notes" placeholder="Allergies, dietary needs, venue access notes, anything else we should log against this entry."></textarea>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <label class="tick-row" style="grid-template-columns:22px 1fr;">
+              <input type="checkbox" name="agree" required>
+              <span class="tick-box" aria-hidden="true"></span>
+              <span class="tick-row__body"><span class="title field-required" style="text-transform:none;letter-spacing:normal;font-weight:500;">I have read and agree to the Terms of This Entry above, including payment, cancellation, and the transport &amp; storage guidance that comes with every order.</span></span>
+            </label>
+          </div>
+
+          <div class="mt-xl">
+            <button type="submit" class="btn btn--primary">Submit This Entry</button>
+          </div>
+
+        </form>
+
+        <div id="standardConfirm" class="stamp-panel" hidden>
+          <div class="stamp">Received</div>
+          <h2 class="headline" style="font-size:1.5rem;">Your entry has been logged.</h2>
+          <p class="body-copy body-copy--muted">
+            This demo confirms the entry was completed correctly — a live site will route
+            this straight to Obsessive Cupcake Disorder for a formal quote and confirmation,
+            per the terms above.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="ledger-footer">
+    <span>Obsessive Cupcake Disorder (PTY) LTD · 2021/623273/07 · Durban, South Africa</span>
+    <span>Enquiries begin on the <a href="/order.html" style="text-decoration:underline;">Order</a> or <a href="/wedding.html" style="text-decoration:underline;">Wedding</a> ledger.</span>
+  </footer>
+
+</div>
+<script src="/assets/js/ledger.js"></script>
+</body>
+</html>

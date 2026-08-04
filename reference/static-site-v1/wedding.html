@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wedding Inquiry — Obsessive Cupcake Disorder</title>
+<meta name="description" content="Begin a wedding cake inquiry, kept under its own contract and terms.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,540;9..144,560;9..144,700&family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/assets/css/ledger.css">
+</head>
+<body>
+<div class="site-shell">
+
+  <header class="ledger-header">
+    <a class="ledger-header__mark" href="/index.html">
+      <img class="ledger-header__roundel" src="/assets/img/ocd-logo.png" alt="Obsessive Cupcake Disorder — it will have you in a frenzy">
+      <span class="ledger-header__wordmark">
+        <span class="name">Obsessive Cupcake Disorder</span>
+        <span class="tagline">It will have you in a frenzy</span>
+      </span>
+    </a>
+    <span class="ledger-header__meta">DURBAN, SOUTH&nbsp;AFRICA</span>
+  </header>
+
+  <nav class="ledger-nav" aria-label="Primary">
+    <ul style="list-style:none;margin:0;padding:0;display:contents;">
+      <li class="ledger-nav__item"><a class="ledger-nav__link" href="/index.html"><span class="label">Home</span></a></li>
+      <li class="ledger-nav__item"><a class="ledger-nav__link" href="/menu.html"><span class="label">Menu</span></a></li>
+      <li class="ledger-nav__item"><a class="ledger-nav__link" href="/gallery.html"><span class="label">Gallery</span></a></li>
+      <li class="ledger-nav__item"><a class="ledger-nav__link" href="/about.html"><span class="label">About</span></a></li>
+      <li class="ledger-nav__item"><a class="ledger-nav__link" href="/order.html"><span class="label">Order</span></a></li>
+      <li class="ledger-nav__item"><a class="ledger-nav__link" href="/wedding.html" aria-current="page"><span class="label">Wedding</span></a></li>
+    </ul>
+  </nav>
+
+  <main>
+
+    <section class="leaf">
+      <div class="leaf__inner">
+        <p class="leaf-kicker">Leaf V — Wedding Inquiry</p>
+        <div style="display:grid;grid-template-columns:1.1fr 1fr;gap:var(--space-2xl);align-items:center;">
+          <div>
+            <h1 class="display" style="font-size:clamp(2.25rem,5vw,3.75rem);">Book Two<br>of the ledger.</h1>
+            <p class="body-copy body-copy--muted" style="font-size:1.0625rem;margin-top:var(--space-md);max-width:60ch;">
+              Wedding cakes are bespoke by nature and kept under a separate Wedding Cake
+              Contract, with its own design lock-in and cancellation terms. This entry
+              starts that conversation — a formal design and quote follow once we've
+              spoken.
+            </p>
+          </div>
+          <figure style="margin:0;">
+            <div class="plate__figure" style="aspect-ratio:3/4;">
+              <img src="/assets/img/cake-wedding-palm-2.jpg" alt="Bespoke two-tier wedding cake with hand-painted palm trees and a monogram topper" loading="eager">
+            </div>
+            <figcaption class="plate__caption" style="margin-top:var(--space-sm);">From a recent OCD wedding entry</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- TERMS -->
+    <section class="leaf reveal">
+      <div class="leaf__inner">
+        <p class="leaf-kicker">Terms of This Entry — Wedding Cake Contract</p>
+        <div class="ledger-table--scroll">
+          <table class="ledger-table">
+            <tbody>
+              <tr><td class="title" style="width:38%;">Booking</td><td>Secured by a completed inquiry and full payment; orders are not confirmed until payment is received and confirmed by us.</td></tr>
+              <tr><td class="title">Design lock-in</td><td>Design, themes, colours and inspiration images are supplied at booking. Changes requested less than 14 days before the event may incur additional charges and are subject to feasibility.</td></tr>
+              <tr><td class="title">Guest count</td><td>An accurate guest count and cake requirement must be confirmed at least 14 days before the wedding.</td></tr>
+              <tr><td class="title">Payment</td><td>Full payment confirms booking; 50% serves as a non-refundable deposit.</td></tr>
+              <tr><td class="title">Cancellations</td><td>More than 14 days before the event — deposit forfeited, no further charge. Within 14 days — 75% cancellation fee. Within 5 days — non-refundable, no credit. Otherwise, a credit voucher valid 36 months is issued per notice period.</td></tr>
+              <tr><td class="title">Delivery &amp; setup</td><td>We deliver and set up at the venue within an agreed window; charges are distance-based and quoted separately. You or a representative must supervise the cake on delivery.</td></tr>
+              <tr><td class="title">Allergens</td><td>Ingredients are disclosed but allergen-free products cannot be guaranteed. Please disclose dietary needs at least 14 days before the event.</td></tr>
+              <tr><td class="title">Governing law</td><td>South African law; disputes are resolved in the courts of Durban.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- FORM -->
+    <section class="leaf reveal">
+      <div class="leaf__inner">
+
+        <form data-ledger-form="#weddingConfirm" novalidate>
+
+          <div class="form-section">
+            <h2 class="title form-section__title">Client Details</h2>
+            <div class="field-grid">
+              <div class="field">
+                <label class="field-required" for="w-name">Full Name</label>
+                <input type="text" id="w-name" name="name" required>
+                <span class="error-note">Required — this is who the contract is entered under.</span>
+              </div>
+              <div class="field">
+                <label class="field-required" for="w-contact">Contact Number</label>
+                <input type="tel" id="w-contact" name="contact" required>
+                <span class="error-note">Required — this is how we confirm your quote.</span>
+              </div>
+              <div class="field">
+                <label for="w-email">Email</label>
+                <input type="email" id="w-email" name="email">
+              </div>
+              <div class="field">
+                <label class="field-required" for="w-date">Wedding Date</label>
+                <input type="date" id="w-date" name="wedding_date" required>
+                <span class="error-note">Required — remember, guest count must be confirmed 14 days out.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2 class="title form-section__title">Event Details</h2>
+            <div class="field-grid">
+              <div class="field">
+                <label for="w-guests">Estimated Guest Count</label>
+                <input type="number" id="w-guests" name="guests" min="1" step="1">
+              </div>
+              <div class="field">
+                <label for="w-venue">Venue &amp; Delivery Address</label>
+                <input type="text" id="w-venue" name="venue">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2 class="title form-section__title">Cake Details</h2>
+            <div class="field-grid">
+              <div class="field">
+                <label for="w-tier">Preferred Tier Configuration</label>
+                <select id="w-tier" name="tier">
+                  <option value="">Not sure — advise me from guest count</option>
+                  <option>Single Tier</option>
+                  <option>Two Tier</option>
+                  <option>Three Tier</option>
+                  <option>Four Tier</option>
+                  <option>Five Tier</option>
+                  <option>Six Tier</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="w-shape">Cake Shape</label>
+                <select id="w-shape" name="shape">
+                  <option value="">Round</option>
+                  <option>Square</option>
+                  <option>Hexagon</option>
+                  <option>Other — describe below</option>
+                </select>
+              </div>
+              <div class="field field--full">
+                <label for="w-flavours">Flavour(s) <span class="hint">one per tier, or your top choices</span></label>
+                <textarea id="w-flavours" name="flavours" placeholder="e.g. Bottom tier — Belgian Chocolate, Ganache Filling. Top tier — Vanilla Bean, Caramel Ganache."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2 class="title form-section__title">Design</h2>
+            <div class="field field--full">
+              <label for="w-theme">Theme, Colours &amp; Style</label>
+              <textarea id="w-theme" name="theme" placeholder="Wedding colours, theme, and any inspiration images you'll send separately."></textarea>
+            </div>
+            <div class="field field--full mt-lg">
+              <label for="w-toppers">Custom Toppers or Add-Ons</label>
+              <textarea id="w-toppers" name="toppers"></textarea>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h2 class="title form-section__title">Dietary &amp; Allergen Notes</h2>
+            <div class="field field--full">
+              <label for="w-dietary">Allergies or Dietary Restrictions</label>
+              <textarea id="w-dietary" name="dietary" placeholder="We disclose ingredients used but can't guarantee allergen-free products — please share anything we need to know."></textarea>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <label class="tick-row" style="grid-template-columns:22px 1fr;">
+              <input type="checkbox" name="agree" required>
+              <span class="tick-box" aria-hidden="true"></span>
+              <span class="tick-row__body"><span class="title field-required" style="text-transform:none;letter-spacing:normal;font-weight:500;">I have read and agree to the Wedding Cake Contract terms above, including payment, design lock-in, and cancellation terms.</span></span>
+            </label>
+          </div>
+
+          <div class="mt-xl">
+            <button type="submit" class="btn btn--primary">Submit This Inquiry</button>
+          </div>
+
+        </form>
+
+        <div id="weddingConfirm" class="stamp-panel" hidden>
+          <div class="stamp">Received</div>
+          <h2 class="headline" style="font-size:1.5rem;">Your inquiry has been logged.</h2>
+          <p class="body-copy body-copy--muted">
+            This demo confirms the inquiry was completed correctly — a live site will
+            route this straight to Obsessive Cupcake Disorder to begin your design and
+            formal Wedding Cake Contract.
+          </p>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="ledger-footer">
+    <span>Obsessive Cupcake Disorder (PTY) LTD · 2021/623273/07 · Durban, South Africa</span>
+    <span>Enquiries begin on the <a href="/order.html" style="text-decoration:underline;">Order</a> or <a href="/wedding.html" style="text-decoration:underline;">Wedding</a> ledger.</span>
+  </footer>
+
+</div>
+<script src="/assets/js/ledger.js"></script>
+</body>
+</html>

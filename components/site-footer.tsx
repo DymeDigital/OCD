@@ -1,0 +1,54 @@
+import Link from "next/link";
+import Image from "next/image";
+import { primaryNav, CTA_LABEL, CTA_HREF } from "@/lib/nav";
+
+export function SiteFooter() {
+  return (
+    <footer className="border-t border-rule bg-icing">
+      <div className="mx-auto max-w-[1280px] px-6 py-16 md:px-12">
+        <div className="grid gap-12 md:grid-cols-[1.5fr_1fr_1fr]">
+          <div>
+            <div className="flex items-center gap-3">
+              <Image src="/images/ocd-logo.png" alt="" width={36} height={36} className="h-9 w-9" aria-hidden />
+              <span className="font-display text-lg font-semibold">Obsessive Cupcake Disorder</span>
+            </div>
+            <p className="label mt-2 text-ink-soft">It will have you in a frenzy.</p>
+            <p className="mt-6 max-w-sm text-ink-soft">
+              Bespoke cakes, cupcakes and signature confections, made to order in Durban.
+            </p>
+          </div>
+
+          <div>
+            <p className="label text-ink-soft">Explore</p>
+            <ul className="mt-4 space-y-3">
+              {primaryNav.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className="transition-colors hover:text-ink">
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <p className="label text-ink-soft">Get in touch</p>
+            <p className="mt-4 text-ink-soft">Durban, South Africa</p>
+            <p className="text-ink-soft">Est. 2021</p>
+            <Link
+              href={CTA_HREF}
+              className="label mt-6 inline-block rounded-[4px] border border-ink px-5 py-2.5 transition-colors hover:bg-ink hover:text-paper"
+            >
+              {CTA_LABEL}
+            </Link>
+          </div>
+        </div>
+
+        <div className="mt-16 flex flex-col gap-2 border-t border-rule pt-6 text-sm text-ink-soft sm:flex-row sm:items-center sm:justify-between">
+          <p>© {new Date().getFullYear()} Obsessive Cupcake Disorder (Pty) Ltd. 2021/623273/07.</p>
+          <p>Nothing&apos;s locked in until we&apos;ve confirmed everything with you first.</p>
+        </div>
+      </div>
+    </footer>
+  );
+}
