@@ -13,7 +13,9 @@ const headlineLines = ["Cakes and cupcakes,", "made for the moment", "you're cel
 // column's own width (md:w-[48%] below) since the actual headline/CTA glyphs occupy much less of
 // that column than its full box; only the sharp foreground layer gets a hard minimum past this.
 const SAFE_ZONE_END = 40;
-const MOBILE_SAFE_ZONE_BOTTOM = 68;
+// On mobile the content stacks vertically. 54 % protects the headline, subheading, and CTAs,
+// so cupcakes generate strictly below the CTA buttons (y >= 58 %).
+const MOBILE_SAFE_ZONE_BOTTOM = 54;
 
 export function Hero() {
   const reduce = useReducedMotion();

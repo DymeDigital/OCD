@@ -1,15 +1,19 @@
 /**
  * Layout generation — decides position, layer, scale, orientation preset and sprite for every
- * particle in the hero's cupcake field. Deliberately knows nothing about drift, rotation speed,
- * duration or delay (see motion.ts) — per the brief, layout is "what a paused frame should look
- * like," animation is "how that frame comes to life." A `ComposedParticle[]` should already read
- * as a deliberately art-directed still image before motion.ts ever touches it.
+ * cupcake in the hero's falling field, plus the spatial facts its fall needs (where the top of its
+ * path sits, how far down it travels). Deliberately knows nothing about spin, speed or loop phase
+ * (see motion.ts) — this file answers "where does this lane sit and how tall is its drop," motion
+ * answers "how fast, which way it spins, and where in the loop it starts."
+ *
+ * Lane x-positions come from fall-lanes.ts — pre-programmed, not randomized, so the field looks the
+ * same on every load. A small ±ANCHOR_JITTER % nudge on x keeps it from reading as a perfect grid
+ * without reintroducing per-session randomness in *placement* (sprite/pose assignment still varies
+ * a little from load to load; the lanes and fall geometry never do).
  */
 import type { CupcakeLayer } from "@/types/cupcake";
 import { POSES, VISIBLE_POSES, PARTIAL_POSES, jitterPose, type Pose } from "./poses";
 import { spritesForLayer, type Sprite } from "./sprites";
-import { ZONES, pickWeightedZone } from "./zones";
-import { placeWithSpacing, type PlacedPoint } from "./spacing";
+import { FALL_LANES, type Lane } from "./fall-lanes";
 import type { DensityTier } from "./responsive";
 
 export type SizeTierName = "hero" | "large" | "medium" | "small" | "tiny";
@@ -22,51 +26,76 @@ export const SIZE_TIERS: Record<SizeTierName, number> = {
   tiny: 0.3,
 };
 
-// Rendered width at scale=1 (percent-independent px baseline) — see FloatingCupcake's BASE_WIDTH,
-// which this must stay in sync with.
-const BASE_WIDTH_PX = 260;
-
 export type ComposedParticle = {
   id: string;
   sprite: Sprite;
   layer: CupcakeLayer;
   x: number;
-  y: number;
+  /** CSS `top`, percent of container height — the top of this particle's fall path (see fall geometry below). */
+  topPct: number;
+  /** Total vertical travel for one pass, px — computed from the live container height so it stays correct across breakpoints. */
+  fallDistancePx: number;
+  fadeInEndFrac: number;
+  fadeOutStartFrac: number;
   scale: number;
   sizeTier: SizeTierName;
   poseName: string;
   rotationX: number;
   rotationY: number;
-  rotationZ: number;
+  rotationZStart: number;
   opacity: number;
   blurPx: number;
 };
 
 /** Per-layer look (§8): back reads small/soft/slow, mid is the primary sharpness/size step up, front is largest and perfectly sharp. */
-const LAYER_LOOK: Record<CupcakeLayer, { opacity: [number, number]; blur: [number, number]; tiers: SizeTierName[] }> = {
-  0: { opacity: [0.32, 0.55], blur: [3, 6], tiers: ["tiny", "tiny", "small"] },
-  1: { opacity: [0.65, 0.75], blur: [1, 1.5], tiers: ["small", "medium", "medium", "large"] },
-  2: { opacity: [0.92, 1], blur: [0, 0], tiers: ["large", "large", "large", "hero"] },
+const LAYER_LOOK: Record<CupcakeLayer, { opacity: [number, number]; blur: [number, number] }> = {
+  0: { opacity: [0.32, 0.55], blur: [3, 6] },
+  1: { opacity: [0.65, 0.75], blur: [1, 1.5] },
+  2: { opacity: [0.92, 1], blur: [0, 0] },
 };
 
-// Extra spacing headroom reserved per layer so motion.ts's independently-chosen drift amplitudes
-// (see the "primary"/"more noticeable" movement per layer in §8) don't need layout.ts to know
-// their exact values to still avoid drifting into overlaps — front drifts furthest, so it gets the
-// most headroom. A hardcoded allowance rather than a shared constant is the deliberate seam
-// between the two modules; motion.ts's actual drift ranges are free to change without this file
-// needing to track them, as long as they stay under this rough budget.
-const DRIFT_HEADROOM_PCT: Record<CupcakeLayer, number> = { 0: 1.5, 1: 2.5, 2: 4 };
-
-// Front is pinned to a flat 5 on every tier (2 tilted + 3 classic, see FRONT_TILTED_COUNT below) —
-// unlike mid/back, which stay tier-scaled for density/performance, the foreground sprite mix is a
-// fixed art-directed count the client wants regardless of viewport.
-type BreakpointSpec = { front: number; mid: number; back: number };
-const BREAKPOINT_SPECS: Record<DensityTier, BreakpointSpec> = {
-  desktop: { front: 5, mid: 3, back: 2 },
-  laptop: { front: 5, mid: 4, back: 5 },
-  tablet: { front: 5, mid: 3, back: 4 },
-  mobile: { front: 5, mid: 3, back: 3 },
+// Mid layer is mostly `tilted` (no logo, reads fine at mid size/blur in any pose) with room left
+// for `newclassic` to mix in — one lane's worth per tier, not a quota of its own, since it isn't
+// pose-restricted (see MID_EXCLUDE_IDS) and doesn't need to dominate the way `tilted` does.
+const MID_TILTED_QUOTA: Record<DensityTier, number> = {
+  desktop: 2,
+  laptop: 3,
+  tablet: 2,
+  mobile: 4,
 };
+// `alt`'s garbled logo has no pose protection at mid's size/sharpness (unlike front, which excludes
+// it outright) — kept out of mid the same way. `classic` is reserved for front, where its quota
+// does the work of surfacing the brand; mid's non-`tilted` slots go to `newclassic` instead so the
+// two layers don't compete for the same handful of front-quality logo shots.
+const MID_EXCLUDE_IDS = ["alt", "classic"];
+
+// Front is the largest, sharpest layer — the one place the logo has to read. `tilted` has no logo
+// at all, and both `alt` and `newclassic` have a warped/illegible logo (see sprites.ts), so all
+// three are excluded outright rather than left to chance — `newclassic` belongs to mid only (see
+// MID_TILTED_QUOTA above), never front. `classic` (cupcake_no_bg.png, the one sprite with a clean,
+// legible logo) gets a guaranteed quota so it isn't left to a flat coin-flip against the rest —
+// but on desktop/laptop's fuller field (5 front lanes plus mid/back layers all falling at once),
+// a majority read as repetitive, so there it's tuned to "some," not "most." Mobile has far fewer
+// cupcakes on screen at all, so a majority there doesn't have the same crowding problem.
+const FRONT_EXCLUDE_IDS = ["tilted", "alt", "newclassic"];
+const FRONT_CLASSIC_QUOTA: Record<DensityTier, number> = {
+  desktop: 2,
+  laptop: 2,
+  tablet: 2,
+  mobile: 2,
+};
+
+// Fall geometry — how far above the visible zone a lane's path starts, and how close to the
+// section's bottom edge it's allowed to still be visible. Both are expressed as absolute percent
+// of container height, not a fraction of any one lane's own travel, so every lane fades out over
+// the same physical band regardless of how far it falls. Kept here (not motion.ts) because they're
+// what fallDistancePx is derived from — a spatial fact about the path, not a timing one.
+const FALL_TOP_OVERSHOOT_PCT = 8; // starts this far above the zone's nominal top, invisible
+const FALL_BOTTOM_FADE_COMPLETE_PCT = 95; // opacity reaches 0 by this height — never touches the true bottom edge, so nothing visibly clips
+const FADE_OUT_SPAN_PCT = 12; // width of the exit fade band, in the same absolute container-height percent as the two constants above
+
+// Tight ±1.0% nudge to preserve hand-tuned lane spacing while avoiding a static grid.
+const LANE_JITTER = 1.0;
 
 function rand(min: number, max: number): number {
   return min + Math.random() * (max - min);
@@ -78,41 +107,27 @@ function pick<T>(arr: T[]): T {
   return arr[randInt(0, arr.length - 1)];
 }
 
-function sizeMultiplier(containerWidth: number): number {
-  return Math.max(0.5, Math.min(1, Math.sqrt(containerWidth / 1440)));
-}
-
-/** Circular radius (percent) that safely bounds the sprite's real box in either orientation — see the file-level note on why a circle, not a box. */
-function radiusPct(sizeTier: SizeTierName, sprite: Sprite, containerWidth: number, containerHeight: number, mult: number): number {
-  const scale = SIZE_TIERS[sizeTier] * mult;
-  const widthPx = BASE_WIDTH_PX * scale;
-  const heightPx = widthPx * (sprite.height / sprite.width);
-  const halfWPct = (widthPx / 2 / containerWidth) * 100;
-  const halfHPct = (heightPx / 2 / containerHeight) * 100;
-  return Math.max(halfWPct, halfHPct);
-}
-
-// §5: "3-4 sharp, unmistakably-close foreground cupcakes" reads best with a fixed, small count of
-// them caught in the `tilted` sprite's more side-on angle — left to independent per-particle
-// coin-flips (the old behaviour), a field could just as easily land zero or five, which either
-// loses the silhouette variety or makes it the dominant look up front. Pinned to exactly two (or
-// fewer only if the front layer itself has fewer than two slots) the same way §5's front count is
-// pinned rather than left to chance.
-const FRONT_TILTED_COUNT = 2;
-
-/** Assigns the front layer's fixed `tilted`-sprite quota across its slots in random order, filling the rest from the front pool's other sprites. */
-function assignFrontSprites(spritePool: Sprite[], count: number): Sprite[] {
-  const tilted = spritePool.find((s) => s.id === "tilted");
-  const rest = spritePool.filter((s) => s.id !== "tilted");
-  const tiltedSlots = tilted ? Math.min(FRONT_TILTED_COUNT, count) : 0;
+/**
+ * Assigns a guaranteed minimum of one sprite (by id) across `count` slots in random order, filling
+ * the rest by uniform random pick from whatever's left in the pool (after `excludeIds`).
+ */
+function assignLayerSprites(
+  spritePool: Sprite[],
+  count: number,
+  quotaId: string | undefined,
+  quotaMax: number,
+  excludeIds: string[] = []
+): Sprite[] {
+  const pool = spritePool.filter((s) => !excludeIds.includes(s.id));
+  const quota = quotaId ? pool.find((s) => s.id === quotaId) : undefined;
+  const rest = pool.filter((s) => s.id !== quotaId);
+  const quotaSlots = quota ? Math.min(quotaMax, count) : 0;
 
   const assignment: Sprite[] = [];
   for (let i = 0; i < count; i++) {
-    if (i < tiltedSlots) assignment.push(tilted!);
-    else assignment.push(rest.length > 0 ? pick(rest) : pick(spritePool));
+    if (i < quotaSlots) assignment.push(quota!);
+    else assignment.push(rest.length > 0 ? pick(rest) : pick(pool));
   }
-  // Shuffle so the two tilted cupcakes don't always land in the first-placed (and so
-  // largest-radius-reserved) front slots.
   for (let i = assignment.length - 1; i > 0; i--) {
     const j = randInt(0, i);
     [assignment[i], assignment[j]] = [assignment[j], assignment[i]];
@@ -121,81 +136,63 @@ function assignFrontSprites(spritePool: Sprite[], count: number): Sprite[] {
 }
 
 function pickPoseForSprite(sprite: Sprite): Pose {
-  // A sprite that can't actually show a legible logo shouldn't get a "visible/partial" logo-bucket
-  // preset picked *for that reason* — but the pose still shapes its tilt/body-language, so pick
-  // from the full set for those, and bias toward the sprite's own preferred pose when one exists.
   const preferring = POSES.filter((p) => p.preferredSprite === sprite.id);
   if (preferring.length > 0 && Math.random() < 0.6) return pick(preferring);
   if (sprite.logoQuality === "clear") return Math.random() < 0.45 ? pick(VISIBLE_POSES) : pick(PARTIAL_POSES);
   return pick(POSES);
 }
 
-const PROXIMITY_PCT = 18; // "beside each other" radius used by every diversify pass below.
+/**
+ * The top and total travel of a lane's fall path, in the units the renderer needs. `zoneTopPct` is
+ * 0 in wide mode (the field spans the section's full height) or the content boundary in narrow mode
+ * (cupcakes only fall below the stacked text block) — mirrors how the old zones.ts drew the same
+ * distinction from `mode`/`contentBoundary`.
+ */
+function fallGeometry(
+  zoneTopPct: number,
+  containerHeight: number
+): { topPct: number; fallDistancePx: number; fadeInEndFrac: number; fadeOutStartFrac: number } {
+  const topPct = zoneTopPct - FALL_TOP_OVERSHOOT_PCT;
+  const fallDistancePct = FALL_BOTTOM_FADE_COMPLETE_PCT - topPct;
+  return {
+    topPct,
+    fallDistancePx: containerHeight * (fallDistancePct / 100),
+    fadeInEndFrac: FALL_TOP_OVERSHOOT_PCT / fallDistancePct,
+    fadeOutStartFrac: 1 - FADE_OUT_SPAN_PCT / fallDistancePct,
+  };
+}
 
-/** §5: no two adjacent particles share a pose, a size tier, or sit on an obvious vertical/horizontal line. */
-function applyCompositionRules(particles: ComposedParticle[], mode: "wide" | "narrow", contentBoundary: number) {
-  // no repeated orientation beside another
-  for (let i = 1; i < particles.length; i++) {
-    const p = particles[i];
-    for (let j = 0; j < i; j++) {
-      const q = particles[j];
-      if (p.poseName !== q.poseName) continue;
-      if (Math.hypot(p.x - q.x, p.y - q.y) >= PROXIMITY_PCT) continue;
-      const alternatives = POSES.filter((pose) => pose.name !== p.poseName);
-      const next = pick(alternatives);
-      p.poseName = next.name;
-      const j2 = jitterPose(next, rand);
-      p.rotationX = j2.rotationX;
-      p.rotationY = j2.rotationY;
-      p.rotationZ = j2.rotationZ;
-      break;
-    }
-  }
+function composeLane(
+  lane: Lane,
+  layer: CupcakeLayer,
+  sprite: Sprite,
+  zoneTopPct: number,
+  containerHeight: number,
+  index: number
+): ComposedParticle {
+  const look = LAYER_LOOK[layer];
+  const pose = pickPoseForSprite(sprite);
+  const jittered = jitterPose(pose, rand);
+  const { topPct, fallDistancePx, fadeInEndFrac, fadeOutStartFrac } = fallGeometry(zoneTopPct, containerHeight);
 
-  // no repeated scale beside another (also covers "no several large cupcakes next to each other")
-  for (let i = 1; i < particles.length; i++) {
-    const p = particles[i];
-    for (let j = 0; j < i; j++) {
-      const q = particles[j];
-      if (p.sizeTier !== q.sizeTier) continue;
-      if (Math.hypot(p.x - q.x, p.y - q.y) >= PROXIMITY_PCT) continue;
-      const layerTiers = LAYER_LOOK[p.layer].tiers;
-      const alternatives = layerTiers.filter((t) => t !== p.sizeTier);
-      if (alternatives.length === 0) continue;
-      const nextTier = pick(alternatives);
-      p.sizeTier = nextTier;
-      p.scale = SIZE_TIERS[nextTier] * rand(0.95, 1.05);
-      break;
-    }
-  }
-
-  // no obvious vertical/horizontal alignment — nudge the later particle of any near-aligned pair.
-  // The axis that's content-sensitive for this mode may only ever be nudged *away* from the
-  // boundary (wide: x only increases; narrow: y only increases) — nudging toward it, even by a
-  // few percent, is exactly what put a cupcake back on top of the headline once already here.
-  for (let i = 1; i < particles.length; i++) {
-    const p = particles[i];
-    for (let j = 0; j < i; j++) {
-      const q = particles[j];
-      const dx = Math.abs(p.x - q.x);
-      const dy = Math.abs(p.y - q.y);
-      if (dx < 5 && dy > 15) {
-        p.x += mode === "wide" ? rand(6, 10) : p.x > 50 ? rand(6, 10) : rand(-10, -6);
-      } else if (dy < 5 && dx > 15) {
-        p.y += mode === "narrow" ? rand(6, 10) : p.y > 50 ? rand(6, 10) : rand(-10, -6);
-      }
-      p.x = Math.min(99, Math.max(1, p.x));
-      p.y = Math.min(97, Math.max(3, p.y));
-    }
-  }
-
-  // Final backstop: nothing above should be able to push a particle back past the content
-  // boundary, but guarantee it explicitly rather than trust every future rule change to remember
-  // this — the zone weighting only guarantees it at the sampling stage.
-  for (const p of particles) {
-    if (mode === "wide" && p.x < contentBoundary) p.x = contentBoundary + rand(0, 5);
-    if (mode === "narrow" && p.y < contentBoundary) p.y = contentBoundary + rand(0, 5);
-  }
+  return {
+    id: `cupcake-${layer}-${index}`,
+    sprite,
+    layer,
+    x: Math.min(98, Math.max(2, lane.x + rand(-LANE_JITTER, LANE_JITTER))),
+    topPct,
+    fallDistancePx,
+    fadeInEndFrac,
+    fadeOutStartFrac,
+    scale: SIZE_TIERS[lane.sizeTier] * rand(0.97, 1.03),
+    sizeTier: lane.sizeTier,
+    poseName: pose.name,
+    rotationX: jittered.rotationX,
+    rotationY: jittered.rotationY,
+    rotationZStart: jittered.rotationZ,
+    opacity: rand(...look.opacity),
+    blurPx: rand(...look.blur),
+  };
 }
 
 export function composeLayout(
@@ -205,78 +202,41 @@ export function composeLayout(
   narrow: boolean,
   contentBoundary: number
 ): ComposedParticle[] {
-  const spec = BREAKPOINT_SPECS[tier];
-  const mult = sizeMultiplier(containerWidth);
   const mode: "wide" | "narrow" = narrow ? "narrow" : "wide";
+  const laneSet = FALL_LANES[tier][mode];
+  // Wide mode: content sits beside the field (left column), so the fall spans the section's full
+  // height and lanes are already x-clamped clear of it. Narrow mode: content stacks above the
+  // field, so the fall only starts below it.
+  const zoneTopPct = mode === "narrow" ? contentBoundary : 0;
 
-  const order: CupcakeLayer[] = [
-    ...Array(spec.front).fill(2),
-    ...Array(spec.mid).fill(1),
-    ...Array(spec.back).fill(0),
-  ];
+  const frontLanes = laneSet[2];
+  const midLanes = laneSet[1];
+  const frontSprites = assignLayerSprites(
+    spritesForLayer(2),
+    frontLanes.length,
+    "classic",
+    FRONT_CLASSIC_QUOTA[tier],
+    FRONT_EXCLUDE_IDS
+  );
+  const midSprites = assignLayerSprites(
+    spritesForLayer(1),
+    midLanes.length,
+    "tilted",
+    MID_TILTED_QUOTA[tier],
+    MID_EXCLUDE_IDS
+  );
 
-  const placed: (PlacedPoint & { layer: CupcakeLayer })[] = [];
   const particles: ComposedParticle[] = [];
 
-  const frontSprites = assignFrontSprites(spritesForLayer(2), spec.front);
-  let frontIndex = 0;
-
-  for (const layer of order) {
-    const look = LAYER_LOOK[layer];
-    const sizeTier = pick(look.tiers);
+  for (const layer of [2, 1, 0] as CupcakeLayer[]) {
+    const lanes = laneSet[layer];
     const spritePool = spritesForLayer(layer);
-    const sprite = layer === 2 ? frontSprites[frontIndex++] : pick(spritePool);
-    const radius = radiusPct(sizeTier, sprite, containerWidth, containerHeight, mult) + DRIFT_HEADROOM_PCT[layer];
 
-    const candidate = () => {
-      const zone = pickWeightedZone(mode, contentBoundary, rand);
-      let x = rand(zone.x[0], zone.x[1]);
-      let y = rand(zone.y[0], zone.y[1]);
-      // The foreground layer keeps one hard rule the soft zone weighting doesn't enforce on its
-      // own: it must never land on the hero copy, at rest or mid-drift. Back/mid stay soft-only —
-      // a translucent, blurred cupcake grazing the text edge reads as depth, not a bug.
-      if (layer === 2) {
-        if (mode === "wide" && x < contentBoundary + 6) x = rand(contentBoundary + 6, 100);
-        if (mode === "narrow" && y < contentBoundary + 6) y = rand(contentBoundary + 6, 100);
-      }
-      x = Math.min(99, Math.max(1, x));
-      y = Math.min(97, Math.max(3, y));
-      return { x, y };
-    };
-
-    const placementBounds =
-      layer === 2
-        ? mode === "wide"
-          ? { xMin: contentBoundary + 6, xMax: 99, yMin: 3, yMax: 97 }
-          : { xMin: 1, xMax: 99, yMin: contentBoundary + 6, yMax: 97 }
-        : { xMin: 1, xMax: 99, yMin: 3, yMax: 97 };
-    const spot = placeWithSpacing(radius, candidate, placed, placementBounds);
-    placed.push({ ...spot, radius, layer });
-
-    const pose = pickPoseForSprite(sprite);
-    const jittered = jitterPose(pose, rand);
-
-    particles.push({
-      id: `cupcake-${particles.length}-${Math.random().toString(36).slice(2, 8)}`,
-      sprite,
-      layer,
-      x: spot.x,
-      y: spot.y,
-      scale: SIZE_TIERS[sizeTier] * rand(0.95, 1.05),
-      sizeTier,
-      poseName: pose.name,
-      rotationX: jittered.rotationX,
-      rotationY: jittered.rotationY,
-      rotationZ: jittered.rotationZ,
-      opacity: rand(...look.opacity),
-      blurPx: rand(...look.blur),
+    lanes.forEach((lane, index) => {
+      const sprite = layer === 2 ? frontSprites[index] : layer === 1 ? midSprites[index] : pick(spritePool);
+      particles.push(composeLane(lane, layer, sprite, zoneTopPct, containerHeight, index));
     });
   }
 
-  applyCompositionRules(particles, mode, contentBoundary);
   return particles;
 }
-
-// Re-exported for callers that only need the zone shape (e.g. a future debug overlay), keeping
-// this module the single entry point for "how is the hero laid out."
-export { ZONES };

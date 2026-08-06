@@ -24,7 +24,7 @@ export const FloatingCupcake = forwardRef<HTMLDivElement, { particle: CupcakePar
         className="pointer-events-none absolute will-change-transform"
         style={{
           left: `${p.x}%`,
-          top: `${p.y}%`,
+          top: `${p.topPct}%`,
           width: BASE_WIDTH,
           filter: p.blurPx ? `blur(${p.blurPx}px)` : undefined,
           // No 3D-transformed children live inside this div (the <Image> is flat), so

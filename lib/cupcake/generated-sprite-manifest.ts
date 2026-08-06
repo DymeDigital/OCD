@@ -6,17 +6,22 @@ export type GeneratedSprite = { src: string; width: number; height: number };
 
 export const GENERATED_SPRITES: GeneratedSprite[] = [
   {
+    "src": "/images/cupcakes_animate/cupcake tilted.png",
+    "width": 1024,
+    "height": 1024
+  },
+  {
     "src": "/images/cupcakes_animate/cupcake_alt_cutout.png",
     "width": 1024,
     "height": 1024
   },
   {
     "src": "/images/cupcakes_animate/cupcake_no_bg.png",
-    "width": 447,
-    "height": 558
+    "width": 1024,
+    "height": 1536
   },
   {
-    "src": "/images/cupcakes_animate/cupcake_tilted_cutout.png",
+    "src": "/images/cupcakes_animate/newcupcake_no bg.png",
     "width": 1024,
     "height": 1024
   }

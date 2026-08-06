@@ -30,8 +30,9 @@ const ALL_LAYERS: CupcakeLayer[] = [0, 1, 2];
 // (no pose will specifically prefer it, which is a fine default for anything dropped in later).
 const OVERRIDES: Record<string, Partial<Pick<Sprite, "id" | "logoQuality" | "layers">>> = {
   "cupcake_no_bg.png": { id: "classic" },
-  "cupcake_tilted_cutout.png": { id: "tilted", logoQuality: "none" },
-  "cupcake_alt_cutout.png": { id: "alt", logoQuality: "garbled", layers: [0, 1] },
+  "cupcake tilted.png": { id: "tilted", logoQuality: "none" },
+  "cupcake_alt_cutout.png": { id: "alt", logoQuality: "garbled" },
+  "newcupcake_no bg.png": { id: "newclassic" },
 };
 
 function idFromSrc(src: string): SpriteId {

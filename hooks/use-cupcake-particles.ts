@@ -16,7 +16,7 @@ import type { CupcakeParticle } from "@/types/cupcake";
 export function useCupcakeParticles(
   containerRef: RefObject<HTMLElement | null>,
   safeZoneEnd = 38,
-  mobileSafeZoneBottom = 68
+  mobileSafeZoneBottom = 54
 ): CupcakeParticle[] {
   const [particles, setParticles] = useState<CupcakeParticle[]>([]);
   const lastTier = useRef<DensityTier | null>(null);
