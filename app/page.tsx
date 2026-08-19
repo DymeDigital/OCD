@@ -3,10 +3,34 @@ import { SectionA } from "@/components/register-a";
 import { Reveal } from "@/components/reveal";
 import { PhotoPlate } from "@/components/photo-plate";
 import { ButtonLink } from "@/components/button";
+import { ReviewsSection } from "@/components/reviews-section";
 import { flavours } from "@/content/data/flavours";
 import { photos } from "@/content/data/photos";
 import { formatPriceFrom, PRICE_CONFIRM_NOTE } from "@/lib/pricing";
 import { sizes } from "@/content/data/sizes";
+
+const whyOcd = [
+  {
+    title: "Designed, not decorated.",
+    body: "Every bespoke cake starts with a concept and is created around the occasion.",
+  },
+  {
+    title: "Flavour matters.",
+    body: "We believe a cake should taste just as good as it looks.",
+  },
+  {
+    title: "Made with intention.",
+    body: "Every element is carefully considered, from the flavour and structure to the final finish.",
+  },
+  {
+    title: "Bespoke by nature.",
+    body: "Our cakes are created around each client's requirements rather than simply choosing from a catalogue.",
+  },
+  {
+    title: "Premium ingredients.",
+    body: "We believe great ingredients are an important part of creating a great cake.",
+  },
+];
 
 const steps = [
   {
@@ -24,7 +48,17 @@ const steps = [
 ];
 
 const mostRequested = flavours.filter((f) => f.mostRequested);
-const featuredPhotos = photos.slice(0, 6);
+// Curated, not slice(0, 6): the headline promises cakes, wedding cakes and cupcakes, so the grid
+// should show more than birthday cakes. Interleaved so the wedding shots don't clump together.
+const featuredPhotoIds = [
+  "mermaid",
+  "wedding-pearl-two-tier",
+  "birthday-albums",
+  "wedding-ombre-red-roses",
+  "skyline-30th",
+  "wedding-watercolor-blue",
+];
+const featuredPhotos = featuredPhotoIds.map((id) => photos.find((p) => p.id === id)!);
 const startingPrice = Math.min(...sizes.map((s) => s.priceFrom));
 
 export default function HomePage() {
@@ -43,8 +77,27 @@ export default function HomePage() {
             ))}
           </div>
           <p className="mt-8 text-ink-soft">
-            Cakes start from {formatPriceFrom(startingPrice)}. {PRICE_CONFIRM_NOTE}
+            Chat to us about your design and we&apos;ll give you a quote based on your requirements.
           </p>
+          <div className="mt-8 flex flex-wrap gap-4">
+            <ButtonLink href="/order">Start your cake or cupcake order</ButtonLink>
+            <ButtonLink href="/order/wedding" variant="ghost">
+              Start your wedding order
+            </ButtonLink>
+          </div>
+        </SectionA>
+      </Reveal>
+
+      <Reveal>
+        <SectionA eyebrow="Why OCD?">
+          <div className="grid gap-x-8 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
+            {whyOcd.map((item) => (
+              <div key={item.title}>
+                <h3 className="font-display text-lg font-medium">{item.title}</h3>
+                <p className="mt-2 text-ink-soft">{item.body}</p>
+              </div>
+            ))}
+          </div>
         </SectionA>
       </Reveal>
 
@@ -58,6 +111,12 @@ export default function HomePage() {
                 <p className="mt-2 text-ink-soft">{step.body}</p>
               </div>
             ))}
+          </div>
+          <div className="mt-12 flex flex-wrap gap-4">
+            <ButtonLink href="/order">Start your cake or cupcake order</ButtonLink>
+            <ButtonLink href="/order/wedding" variant="ghost">
+              Start your wedding order
+            </ButtonLink>
           </div>
         </SectionA>
       </Reveal>
@@ -78,6 +137,10 @@ export default function HomePage() {
             <ButtonLink href="/cakes">See all 14 flavours</ButtonLink>
           </div>
         </SectionA>
+      </Reveal>
+
+      <Reveal>
+        <ReviewsSection className="bg-icing" />
       </Reveal>
 
       <Reveal>

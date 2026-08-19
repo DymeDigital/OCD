@@ -58,12 +58,12 @@ export function Hero() {
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-4 md:justify-start">
             <ButtonLink href="/order">Start your order</ButtonLink>
-            <ButtonLink href="/cakes" variant="ghost">
-              See what we make
+            <ButtonLink href="/gallery" variant="ghost">
+              Explore our work
             </ButtonLink>
           </div>
           <div className="mt-12 flex justify-center gap-6 text-sm text-ink-soft md:justify-start">
-            <span>Est. 2021</span>
+            <span>Est. 2017</span>
             <span>Durban, South Africa</span>
           </div>
         </motion.div>

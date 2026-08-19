@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { SectionA } from "@/components/register-a";
 import { Reveal } from "@/components/reveal";
 import { ButtonLink } from "@/components/button";
+import { AutoCarousel } from "@/components/auto-carousel";
 import { flavours } from "@/content/data/flavours";
 import { sizes, sizesFootnote } from "@/content/data/sizes";
-import { formatRange, formatPriceFrom, PRICE_CONFIRM_NOTE } from "@/lib/pricing";
+import { photos } from "@/content/data/photos";
+import { formatRange, PRICE_CONFIRM_NOTE } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Cakes",
@@ -12,21 +14,32 @@ export const metadata: Metadata = {
 };
 
 const cakeFlavours = flavours.filter((f) => f.category === "cake" || f.category === "both");
+const cakePhotos = photos.filter((p) => p.category === "cake" && p.hero).slice(0, 5);
 
 export default function CakesPage() {
   return (
     <>
       <Reveal>
         <SectionA eyebrow="Cakes">
-          <h1 className="max-w-2xl font-display text-2xl font-medium">
-            Fourteen flavours. Six tiers of scale. One quote, built around your event.
-          </h1>
-          <p className="mt-6 max-w-xl text-lg text-ink-soft">
-            Pick a flavour below, or start your order and tell us your guest count — we&apos;ll
-            help you land on the right size.
-          </p>
-          <div className="mt-8">
-            <ButtonLink href="/order">Start your order</ButtonLink>
+          <div className="grid gap-10 md:grid-cols-[1fr_260px] md:items-center">
+            <div>
+              <h1 className="max-w-2xl font-display text-2xl font-medium">
+                Fourteen flavours. Six tiers of scale. One quote, built around your event.
+              </h1>
+              <p className="mt-6 max-w-xl text-lg text-ink-soft">
+                Pick a flavour below, or start your order and tell us your guest count —
+                we&apos;ll help you land on the right size.
+              </p>
+              <div className="mt-8">
+                <ButtonLink href="/order">Start your order</ButtonLink>
+              </div>
+            </div>
+            <div className="mx-auto w-full max-w-[260px]">
+              <AutoCarousel photos={cakePhotos} href="/gallery?category=cake" hrefLabel="View cake gallery" />
+              <ButtonLink href="/gallery?category=cake" variant="ghost" className="mt-4 w-full justify-center">
+                View gallery
+              </ButtonLink>
+            </div>
           </div>
         </SectionA>
       </Reveal>
@@ -43,6 +56,9 @@ export default function CakesPage() {
               </div>
             ))}
           </div>
+          <div className="mt-10">
+            <ButtonLink href="/order">Start your order</ButtonLink>
+          </div>
         </SectionA>
       </Reveal>
 
@@ -56,8 +72,7 @@ export default function CakesPage() {
                 <tr className="border-b border-ink text-left">
                   <th className="label py-3 pr-4 font-normal text-ink-soft">Tier</th>
                   <th className="label py-3 pr-4 font-normal text-ink-soft">Sizes</th>
-                  <th className="label py-3 pr-4 font-normal text-ink-soft">Servings</th>
-                  <th className="label py-3 text-right font-normal text-ink-soft">From</th>
+                  <th className="label py-3 font-normal text-ink-soft">Servings</th>
                 </tr>
               </thead>
               <tbody>
@@ -68,10 +83,9 @@ export default function CakesPage() {
                       {s.sizesCm.map((cm) => `${cm}cm`).join(", ")}
                       {s.layersNote ? ` (${s.layersNote})` : ""}
                     </td>
-                    <td className="py-3 pr-4 text-ink-soft">
+                    <td className="py-3 text-ink-soft">
                       {s.servingsMin}–{s.servingsMax}
                     </td>
-                    <td className="py-3 text-right">{formatPriceFrom(s.priceFrom)}</td>
                   </tr>
                 ))}
               </tbody>

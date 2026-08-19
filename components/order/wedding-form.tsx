@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePersistedForm, clearPersistedForm } from "@/lib/use-persisted-form";
 import { weddingOrderSchema, deliveryModes, foundUsOptions, type WeddingOrderFormValues } from "@/lib/schemas";
 import { computeWeddingLedger } from "@/lib/ledger";
-import { flavours } from "@/content/data/flavours";
+import { flavours, egglessFlavourIds } from "@/content/data/flavours";
 import { weddingTerms } from "@/content/data/terms";
 import { LedgerPanel } from "@/components/order/ledger-panel";
 import { ImageUpload } from "@/components/order/image-upload";
@@ -36,7 +36,9 @@ export function WeddingForm() {
   const [files, setFiles] = useState<File[]>([]);
 
   const form = usePersistedForm<WeddingOrderFormValues>(STORAGE_KEY, zodResolver(weddingOrderSchema), {
+    fauxTierCount: 0,
     perTierFlavourIds: [],
+    dietaryOptions: [],
     tastingWanted: false,
     deliveryMode: "delivery",
   } as unknown as WeddingOrderFormValues);
@@ -44,10 +46,25 @@ export function WeddingForm() {
   const values = form.watch();
   const ledger = useMemo(() => computeWeddingLedger(values), [values]);
 
+  // Eggless only comes in Vanilla Bean — deselect any other flavour the moment eggless is checked.
+  useEffect(() => {
+    if (!values.dietaryOptions?.includes("eggless")) return;
+    const perTier = values.perTierFlavourIds ?? [];
+    const filtered = perTier.filter((id) => egglessFlavourIds.includes(id));
+    if (filtered.length !== perTier.length) form.setValue("perTierFlavourIds", filtered, { shouldValidate: true });
+  }, [values.dietaryOptions, values.perTierFlavourIds, form]);
+
+  // At least one tier must be real cake — pull faux count down if tier count drops below it.
+  useEffect(() => {
+    const tierCount = values.tierCount ?? 1;
+    const faux = values.fauxTierCount ?? 0;
+    if (faux >= tierCount) form.setValue("fauxTierCount", Math.max(0, tierCount - 1), { shouldValidate: true });
+  }, [values.tierCount, values.fauxTierCount, form]);
+
   const stepFields: (keyof WeddingOrderFormValues)[][] = [
     ["partnerNames", "venue", "venueContact"],
     ["weddingDate", "weddingTime"],
-    ["guestCount", "tierCount"],
+    ["guestCount", "tierCount", "fauxTierCount"],
     [],
     ["designBrief"],
     [],
@@ -134,15 +151,40 @@ export function WeddingForm() {
                 </option>
               ))}
             </SelectField>
+            <SelectField
+              label="Faux/dummy tiers (optional)"
+              register={form.register("fauxTierCount", { valueAsNumber: true })}
+              error={form.formState.errors.fauxTierCount?.message}
+            >
+              {Array.from({ length: values.tierCount ?? 1 }, (_, n) => n).map((n) => (
+                <option key={n} value={n}>
+                  {n === 0 ? "None — all real cake" : `${n} faux tier${n > 1 ? "s" : ""}`}
+                </option>
+              ))}
+            </SelectField>
+            <p className="text-sm text-ink-soft">
+              Faux tiers are polystyrene, iced to match — handy for extra height on a budget. At
+              least one tier needs to be real cake.
+            </p>
           </div>
         )}
 
         {step === 3 && (
-          <CheckboxCardGroup
-            legend="Flavour(s) — pick one per tier, or mix it up"
-            options={flavours.map((f) => ({ value: f.id, label: f.name, description: f.filling }))}
-            register={form.register("perTierFlavourIds")}
-          />
+          <div className="space-y-8">
+            <CheckboxCardGroup
+              legend="Flavour(s) — pick one per tier, or mix it up"
+              options={flavours.map((f) => ({ value: f.id, label: f.name, description: f.filling }))}
+              register={form.register("perTierFlavourIds")}
+            />
+            <CheckboxCardGroup
+              legend="Dietary options"
+              options={[
+                { value: "gluten-free", label: "Gluten free" },
+                { value: "eggless", label: "Eggless", description: "Available in Vanilla only" },
+              ]}
+              register={form.register("dietaryOptions")}
+            />
+          </div>
         )}
 
         {step === 4 && (

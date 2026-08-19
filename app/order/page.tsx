@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SectionB } from "@/components/register-b";
 import { OrderForm } from "@/components/order/order-form";
 
@@ -14,6 +15,13 @@ export default function OrderPage() {
       <h1 className="mt-3 max-w-xl font-display text-2xl font-medium">Tell us about your cake.</h1>
       <p className="mt-3 max-w-xl text-ink-soft">
         Nothing&apos;s locked in yet — we&apos;ll confirm everything with you first.
+      </p>
+      <p className="mt-3 max-w-xl text-ink-soft">
+        Planning a wedding cake instead?{" "}
+        <Link href="/order/wedding" className="text-ink underline underline-offset-2 hover:text-red-ink">
+          Use the wedding order form
+        </Link>
+        .
       </p>
       <div className="mt-12">
         <OrderForm />

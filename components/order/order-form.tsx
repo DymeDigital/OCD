@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePersistedForm, clearPersistedForm } from "@/lib/use-persisted-form";
@@ -14,7 +14,7 @@ import {
   type OrderFormValues,
 } from "@/lib/schemas";
 import { computeOrderLedger } from "@/lib/ledger";
-import { flavours } from "@/content/data/flavours";
+import { flavours, egglessFlavourIds } from "@/content/data/flavours";
 import { designTiers } from "@/content/data/designTiers";
 import { sizesForServings } from "@/content/data/sizes";
 import { LedgerPanel } from "@/components/order/ledger-panel";
@@ -55,6 +55,7 @@ export function OrderForm() {
     productType: undefined,
     cakeFlavourIds: [],
     cupcakeFlavourIds: [],
+    dietaryOptions: [],
     confections: [],
     deliveryMode: "collection",
   } as unknown as OrderFormValues);
@@ -64,6 +65,18 @@ export function OrderForm() {
 
   const cakeFlavours = flavours.filter((f) => f.category === "cake" || f.category === "both");
   const cupcakeFlavours = flavours.filter((f) => f.category === "cupcake" || f.category === "both");
+
+  // Eggless only comes in Vanilla Bean — deselect any other flavour the moment eggless is checked.
+  useEffect(() => {
+    if (!values.dietaryOptions?.includes("eggless")) return;
+    const cake = values.cakeFlavourIds ?? [];
+    const cupcake = values.cupcakeFlavourIds ?? [];
+    const filteredCake = cake.filter((id) => egglessFlavourIds.includes(id));
+    const filteredCupcake = cupcake.filter((id) => egglessFlavourIds.includes(id));
+    if (filteredCake.length !== cake.length) form.setValue("cakeFlavourIds", filteredCake, { shouldValidate: true });
+    if (filteredCupcake.length !== cupcake.length)
+      form.setValue("cupcakeFlavourIds", filteredCupcake, { shouldValidate: true });
+  }, [values.dietaryOptions, values.cakeFlavourIds, values.cupcakeFlavourIds, form]);
 
   const stepFields: (keyof OrderFormValues)[][] = [
     ["occasion"],
@@ -215,6 +228,14 @@ export function OrderForm() {
                 register={form.register("cupcakeFlavourIds")}
               />
             )}
+            <CheckboxCardGroup
+              legend="Dietary options"
+              options={[
+                { value: "gluten-free", label: "Gluten free" },
+                { value: "eggless", label: "Eggless", description: "Available in Vanilla only" },
+              ]}
+              register={form.register("dietaryOptions")}
+            />
           </div>
         )}
 

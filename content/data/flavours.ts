@@ -10,6 +10,10 @@ export type Flavour = {
   mostRequested: boolean;
 };
 
+// Client-confirmed 2026-08-16: eggless is only available on the Vanilla Bean sponge. The order
+// forms use this list to auto-deselect incompatible flavours the moment "eggless" is checked.
+export const egglessFlavourIds = ["vanilla-bean-caramel"];
+
 export const flavours: Flavour[] = [
   {
     id: "belgian-chocolate",

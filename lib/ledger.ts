@@ -84,11 +84,14 @@ export function computeWeddingLedger(values: Partial<WeddingOrderFormValues>): L
     if (match) {
       const guestsExceedTier =
         !exactMatch && !!values.guestCount && values.guestCount > match.servingsMax;
+      const faux = values.fauxTierCount ?? 0;
+      const fauxNote = faux > 0 ? ` — ${faux} of ${values.tierCount} tiers faux/dummy (display only, final quote may differ)` : "";
       lines.push({
         label: `${match.tierLabel} wedding cake`,
-        detail: guestsExceedTier
-          ? `${match.sizesCm.map((c) => `${c}cm`).join(", ")} — up to ${match.servingsMax} servings. ${values.guestCount} guests may need more tiers.`
-          : `${match.sizesCm.map((c) => `${c}cm`).join(", ")} — ${match.servingsMin}–${match.servingsMax} servings`,
+        detail:
+          (guestsExceedTier
+            ? `${match.sizesCm.map((c) => `${c}cm`).join(", ")} — up to ${match.servingsMax} servings. ${values.guestCount} guests may need more tiers.`
+            : `${match.sizesCm.map((c) => `${c}cm`).join(", ")} — ${match.servingsMin}–${match.servingsMax} servings`) + fauxNote,
         amount: match.priceFrom,
       });
       priceFrom += match.priceFrom;

@@ -46,10 +46,10 @@ export const weddingTerms = {
 };
 
 /** Fields that appear in CLAUDE.md's own §12 "Open questions for the client" — genuinely
- * undocumented anywhere in the source PDFs. Rendered as TODO(client) placeholders, never invented. */
+ * undocumented anywhere in the source PDFs. Rendered as TODO(client) placeholders, never invented.
+ * WhatsApp number and Instagram handle were answered by the client 2026-08-15 — see
+ * content/data/socialLinks.ts, now the source of truth for those. */
 export const openQuestions = {
-  whatsappNumber: null as string | null,
   deliveryAreas: null as string | null,
   weddingTastingPolicy: null as string | null,
-  instagramHandle: null as string | null,
 };

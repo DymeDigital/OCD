@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { SectionA } from "@/components/register-a";
 import { Reveal } from "@/components/reveal";
 import { ButtonLink } from "@/components/button";
+import { AutoCarousel } from "@/components/auto-carousel";
 import { flavours } from "@/content/data/flavours";
 import { confections, cupcakeBase } from "@/content/data/confections";
+import { photos } from "@/content/data/photos";
 import { formatPriceFrom, PRICE_CONFIRM_NOTE } from "@/lib/pricing";
 
 export const metadata: Metadata = {
@@ -12,21 +14,32 @@ export const metadata: Metadata = {
 };
 
 const cupcakeFlavours = flavours.filter((f) => f.category === "cupcake" || f.category === "both");
+const cupcakePhotos = photos.filter((p) => p.category === "cupcakes").slice(0, 5);
 
 export default function CupcakesPage() {
   return (
     <>
       <Reveal>
         <SectionA eyebrow="Cupcakes & confections">
-          <h1 className="max-w-2xl font-display text-2xl font-medium">
-            Gourmet cupcakes, and a full line of signature confections.
-          </h1>
-          <p className="mt-6 max-w-xl text-lg text-ink-soft">{cupcakeBase.description}</p>
-          <p className="mt-4 text-ink-soft">
-            {formatPriceFrom(cupcakeBase.priceFrom)} per {cupcakeBase.unit}. {PRICE_CONFIRM_NOTE}
-          </p>
-          <div className="mt-8">
-            <ButtonLink href="/order">Start your order</ButtonLink>
+          <div className="grid gap-10 md:grid-cols-[1fr_260px] md:items-center">
+            <div>
+              <h1 className="max-w-2xl font-display text-2xl font-medium">
+                Gourmet cupcakes, and a full line of signature confections.
+              </h1>
+              <p className="mt-6 max-w-xl text-lg text-ink-soft">{cupcakeBase.description}</p>
+              <p className="mt-4 text-ink-soft">
+                {formatPriceFrom(cupcakeBase.priceFrom)} per {cupcakeBase.unit}. {PRICE_CONFIRM_NOTE}
+              </p>
+              <div className="mt-8">
+                <ButtonLink href="/order">Start your order</ButtonLink>
+              </div>
+            </div>
+            <div className="mx-auto w-full max-w-[260px]">
+              <AutoCarousel photos={cupcakePhotos} href="/gallery?category=cupcakes" hrefLabel="View cupcake gallery" />
+              <ButtonLink href="/gallery?category=cupcakes" variant="ghost" className="mt-4 w-full justify-center">
+                View gallery
+              </ButtonLink>
+            </div>
           </div>
         </SectionA>
       </Reveal>
@@ -42,6 +55,9 @@ export default function CupcakesPage() {
                 <p className="mt-2 text-ink-soft">{flavour.description}</p>
               </div>
             ))}
+          </div>
+          <div className="mt-10">
+            <ButtonLink href="/order">Start your order</ButtonLink>
           </div>
         </SectionA>
       </Reveal>

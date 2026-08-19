@@ -9,6 +9,11 @@ export const productTypes = ["cake", "cupcakes", "both"] as const;
 export const cakeShapes = ["Round", "Square", "Hexagon", "Number/Letter", "Other"] as const;
 export const deliveryModes = ["delivery", "collection"] as const;
 export const foundUsOptions = ["Instagram", "Google", "Friend/family", "Past order", "Other"] as const;
+// Client-confirmed 2026-08-16: eggless is only available on the Vanilla Bean sponge. Enforced in
+// the UI (order-form.tsx / wedding-form.tsx auto-deselect incompatible flavours on check), not
+// here — this schema has no cross-field rule, so a payload with eggless + another flavour is
+// still schema-valid on its own.
+export const dietaryOptions = ["gluten-free", "eggless"] as const;
 
 // An unselected radio group or a placeholder-option <select> reaches the schema as `null` or
 // `""` (react-hook-form's uncontrolled default), never `undefined` — z.enum(...).optional() only
@@ -55,6 +60,8 @@ const orderObjectSchema = z.object({
   cupcakeDozens: z.number().int().min(1).optional(),
   cupcakeFlavourIds: z.array(z.string()).default([]),
 
+  dietaryOptions: z.array(z.enum(dietaryOptions)).default([]),
+
   // Design
   designTierId: optionalEnum(["simple", "detailed", "showpiece"] as const),
   designBrief: z.string().trim().optional(),
@@ -97,7 +104,9 @@ const weddingObjectSchema = z.object({
   weddingTime: z.string().optional(),
   guestCount: z.number().int().min(1, "Roughly how many guests?"),
   tierCount: z.number().int().min(1).max(6),
+  fauxTierCount: z.number().int().min(0).max(5).default(0),
   perTierFlavourIds: z.array(z.string()).default([]),
+  dietaryOptions: z.array(z.enum(dietaryOptions)).default([]),
   cakeTableSetup: z.string().trim().optional(),
   tastingWanted: z.boolean().default(false),
   plannerName: z.string().trim().optional(),
@@ -110,11 +119,13 @@ const weddingObjectSchema = z.object({
   ...contactFields,
 });
 
-export const weddingOrderSchema = weddingObjectSchema.refine(
-  (v) => v.deliveryMode === "collection" || !!(v.address && v.address.length > 4),
-  {
+export const weddingOrderSchema = weddingObjectSchema
+  .refine((v) => v.deliveryMode === "collection" || !!(v.address && v.address.length > 4), {
     message: "We need a venue address to quote delivery.",
     path: ["address"],
-  }
-);
+  })
+  .refine((v) => v.fauxTierCount < v.tierCount, {
+    message: "At least one tier needs to be real cake.",
+    path: ["fauxTierCount"],
+  });
 export type WeddingOrderFormValues = z.input<typeof weddingObjectSchema>;
