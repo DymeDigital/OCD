@@ -67,8 +67,8 @@ export default function HomePage() {
       <Hero />
 
       <Reveal>
-        <SectionA eyebrow="What we make">
-          <h2 className="max-w-2xl font-display text-2xl font-medium">
+        <SectionA eyebrow="What we make" className="text-center md:text-left">
+          <h2 className="mx-auto max-w-2xl font-display text-2xl font-medium md:mx-0">
             Celebration cakes, wedding cakes, cupcakes, and a full line of signature confections.
           </h2>
           <div className="mt-12 grid grid-cols-2 gap-4 md:grid-cols-3">
@@ -76,10 +76,10 @@ export default function HomePage() {
               <PhotoPlate key={photo.id} photo={photo} priority={i === 0} />
             ))}
           </div>
-          <p className="mt-8 text-ink-soft">
+          <p className="mx-auto mt-8 max-w-xl text-ink-soft md:mx-0">
             Chat to us about your design and we&apos;ll give you a quote based on your requirements.
           </p>
-          <div className="mt-8 flex flex-wrap gap-4">
+          <div className="mt-8 flex flex-wrap justify-center gap-4 md:justify-start">
             <ButtonLink href="/order">Start your cake or cupcake order</ButtonLink>
             <ButtonLink href="/order/wedding" variant="ghost">
               Start your wedding order
@@ -102,7 +102,7 @@ export default function HomePage() {
       </Reveal>
 
       <Reveal>
-        <SectionA eyebrow="How ordering works" className="bg-icing">
+        <SectionA eyebrow="How ordering works" className="bg-icing text-center md:text-left">
           <div className="grid gap-12 md:grid-cols-3">
             {steps.map((step, i) => (
               <div key={step.title}>
@@ -112,7 +112,7 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          <div className="mt-12 flex flex-wrap gap-4">
+          <div className="mt-12 flex flex-wrap justify-center gap-4 md:justify-start">
             <ButtonLink href="/order">Start your cake or cupcake order</ButtonLink>
             <ButtonLink href="/order/wedding" variant="ghost">
               Start your wedding order

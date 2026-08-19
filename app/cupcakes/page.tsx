@@ -20,17 +20,17 @@ export default function CupcakesPage() {
   return (
     <>
       <Reveal>
-        <SectionA eyebrow="Cupcakes & confections">
+        <SectionA eyebrow="Cupcakes & confections" className="text-center md:text-left">
           <div className="grid gap-10 md:grid-cols-[1fr_260px] md:items-center">
             <div>
-              <h1 className="max-w-2xl font-display text-2xl font-medium">
+              <h1 className="mx-auto max-w-2xl font-display text-xl font-medium md:mx-0 md:text-2xl">
                 Gourmet cupcakes, and a full line of signature confections.
               </h1>
-              <p className="mt-6 max-w-xl text-lg text-ink-soft">{cupcakeBase.description}</p>
+              <p className="mx-auto mt-6 max-w-xl text-base text-ink-soft md:mx-0 md:text-lg">{cupcakeBase.description}</p>
               <p className="mt-4 text-ink-soft">
                 {formatPriceFrom(cupcakeBase.priceFrom)} per {cupcakeBase.unit}. {PRICE_CONFIRM_NOTE}
               </p>
-              <div className="mt-8">
+              <div className="mt-8 flex justify-center md:justify-start">
                 <ButtonLink href="/order">Start your order</ButtonLink>
               </div>
             </div>
@@ -56,7 +56,7 @@ export default function CupcakesPage() {
               </div>
             ))}
           </div>
-          <div className="mt-10">
+          <div className="mt-10 flex justify-center">
             <ButtonLink href="/order">Start your order</ButtonLink>
           </div>
         </SectionA>

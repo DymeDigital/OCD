@@ -44,18 +44,18 @@ export default function WeddingsPage() {
   return (
     <>
       <Reveal>
-        <SectionA eyebrow="Weddings">
+        <SectionA eyebrow="Weddings" className="text-center md:text-left">
           <div className="grid gap-10 md:grid-cols-[1fr_260px] md:items-center">
             <div>
-              <h1 className="max-w-2xl font-display text-2xl font-medium">
+              <h1 className="mx-auto max-w-2xl font-display text-xl font-medium md:mx-0 md:text-2xl">
                 A wedding cake, designed around your day.
               </h1>
-              <p className="mt-6 max-w-xl text-lg text-ink-soft">
+              <p className="mx-auto mt-6 max-w-xl text-base text-ink-soft md:mx-0 md:text-lg">
                 Wedding cakes get their own process — more design time, a dedicated form, and
                 terms built for a day that can&apos;t move. We&apos;ll talk through tiers,
                 flavours per tier, and how it all comes together on the table.
               </p>
-              <div className="mt-8">
+              <div className="mt-8 flex justify-center md:justify-start">
                 <ButtonLink href="/order/wedding">Start your wedding order</ButtonLink>
               </div>
             </div>
@@ -89,7 +89,7 @@ export default function WeddingsPage() {
             Wondering about a tasting before you commit? Ask us when you get in touch — we&apos;ll
             let you know what&apos;s available.
           </p>
-          <div className="mt-10">
+          <div className="mt-10 flex justify-center">
             <ButtonLink href="/order/wedding">Start your wedding order</ButtonLink>
           </div>
         </SectionA>
