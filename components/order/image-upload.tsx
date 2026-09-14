@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { MAX_FILES, MAX_SIZE_BYTES, ACCEPT_ATTR } from "@/lib/upload-constraints";
 
-// §9 step 6 + §4: "accept them, show thumbnails and filenames in the ledger, hold them in
-// memory. Don't upload anywhere." Client-side only — not persisted across a page reload, unlike
-// the rest of the form (Files aren't JSON-serialisable for the localStorage autosave).
-const MAX_FILES = 5;
-const MAX_SIZE_BYTES = 10 * 1024 * 1024;
-const ACCEPT = "image/jpeg,image/png,image/heic,image/heif";
+// §9 step 6: shows thumbnails and filenames in the ledger. Files aren't persisted to the
+// localStorage autosave (not JSON-serialisable) — on submit they travel to /api/submit-order
+// as part of one multipart request; see order-form.tsx / wedding-form.tsx onSubmit.
 
 export function ImageUpload({ files, onChange }: { files: File[]; onChange: (files: File[]) => void }) {
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +47,7 @@ export function ImageUpload({ files, onChange }: { files: File[]; onChange: (fil
         Click to choose images, or drag them here
         <input
           type="file"
-          accept={ACCEPT}
+          accept={ACCEPT_ATTR}
           multiple
           className="sr-only"
           onChange={(e) => {

@@ -1,0 +1,919 @@
+<title>WhatsApp Order Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT,WONK@9..144,300..700,0..100,0..1&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --paper: #FFFFFF;
+    --ink: #111111;
+    --ink-soft: #6B6B6B;
+    --rule: #E4E4E4;
+    --ledger-line: #D6DFE6;
+    --red-ink: #A81E27;
+    --icing: #F7F4F2;
+    --shadow-line: rgba(17,17,17,0.08);
+
+    --wa-header: #075E54;
+    --wa-header-sub: #CFE8E4;
+    --wa-chat-bg: #E9E0D6;
+    --wa-bubble: #FFFFFF;
+    --wa-bubble-shadow: rgba(0,0,0,0.14);
+    --wa-tick: #34B7F1;
+    --wa-accent: #25D366;
+    --wa-input-bg: #F0F0F0;
+    --wa-icon: #54656F;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14120F;
+      --ink: #F3F1EE;
+      --ink-soft: #A6A19A;
+      --rule: #2B2823;
+      --ledger-line: #3A4650;
+      --red-ink: #E0525C;
+      --icing: #211E1A;
+      --shadow-line: rgba(0,0,0,0.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14120F;
+    --ink: #F3F1EE;
+    --ink-soft: #A6A19A;
+    --rule: #2B2823;
+    --ledger-line: #3A4650;
+    --red-ink: #E0525C;
+    --icing: #211E1A;
+    --shadow-line: rgba(0,0,0,0.4);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Instrument Sans", system-ui, sans-serif;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 4rem 1.5rem 6rem;
+  }
+
+  header.page-head {
+    max-width: 46rem;
+    margin: 0 0 3.5rem;
+  }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--red-ink);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    margin: 0 0 1rem;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    background: var(--red-ink);
+    border-radius: 50%;
+    display: inline-block;
+  }
+  h1 {
+    font-family: "Fraunces", Georgia, serif;
+    font-optical-sizing: auto;
+    font-variation-settings: "SOFT" 40, "WONK" 0;
+    font-weight: 480;
+    font-size: clamp(2rem, 4vw, 2.9rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin: 0 0 1rem;
+    text-wrap: balance;
+  }
+  .page-head p {
+    color: var(--ink-soft);
+    font-size: 1.0625rem;
+    max-width: 42rem;
+    margin: 0 0 0.6rem;
+  }
+  .page-head p strong { color: var(--ink); font-weight: 600; }
+
+  .ref-strip {
+    margin-top: 1.75rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.75rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.75rem;
+    color: var(--ink-soft);
+    border-top: 1px solid var(--rule);
+    padding-top: 1rem;
+  }
+  .ref-strip b { color: var(--ink); font-weight: 500; }
+
+  /* ---- comparison grid ---- */
+  .compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .compare { grid-template-columns: 1fr; gap: 4rem; }
+  }
+
+  .col-head {
+    margin-bottom: 1.5rem;
+  }
+  .col-tag {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .col-title {
+    font-family: "Fraunces", Georgia, serif;
+    font-variation-settings: "SOFT" 30;
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin: 0.2rem 0 0.5rem;
+  }
+  .col-desc {
+    color: var(--ink-soft);
+    font-size: 0.9375rem;
+    max-width: 34ch;
+  }
+
+  /* ---- phone shell ---- */
+  .phone-shell {
+    display: flex;
+    justify-content: center;
+    margin: 2rem 0;
+  }
+  .phone {
+    width: min(340px, 100%);
+    background: #0B0B0B;
+    border-radius: 34px;
+    padding: 10px;
+    box-shadow: 0 24px 48px -20px var(--shadow-line), 0 2px 0 var(--shadow-line);
+  }
+  .phone-screen {
+    background: var(--wa-chat-bg);
+    border-radius: 26px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 620px;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    position: relative;
+  }
+  .wa-status {
+    background: var(--wa-header);
+    color: #fff;
+    font-size: 0.7rem;
+    padding: 8px 18px 2px;
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+  }
+  .wa-header-bar {
+    background: var(--wa-header);
+    color: #fff;
+    padding: 6px 12px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .wa-back { font-size: 1.3rem; opacity: 0.9; line-height: 1; }
+  .wa-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, #F7F4F2, #E4E4E4);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.05rem;
+    flex-shrink: 0;
+  }
+  .wa-id { flex: 1; min-width: 0; }
+  .wa-name { font-size: 0.9375rem; font-weight: 600; line-height: 1.2; }
+  .wa-sub { font-size: 0.7rem; color: var(--wa-header-sub); }
+  .wa-icons { display: flex; gap: 14px; font-size: 1rem; opacity: 0.95; }
+
+  .wa-chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 10px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .wa-daychip {
+    align-self: center;
+    background: #FFF3C4;
+    color: #6B5D1E;
+    font-size: 0.6875rem;
+    padding: 3px 10px;
+    border-radius: 6px;
+    margin: 2px 0 10px;
+  }
+
+  .bubble {
+    background: var(--wa-bubble);
+    border-radius: 0 8px 8px 8px;
+    box-shadow: 0 1px 1px var(--wa-bubble-shadow);
+    padding: 6px 8px 5px 9px;
+    max-width: 87%;
+    align-self: flex-start;
+    margin-bottom: 7px;
+    position: relative;
+  }
+  .bubble .msg-text {
+    font-size: 0.775rem;
+    color: #111;
+    white-space: pre-wrap;
+    line-height: 1.42;
+  }
+  .msg-text b { font-weight: 700; }
+  .msg-text i { font-style: italic; color: #3d3d3d; }
+  .bubble .msg-time {
+    float: right;
+    font-size: 0.625rem;
+    color: #8b9198;
+    margin: 3px 0 -2px 8px;
+  }
+  .bubble::after { content: ""; clear: both; display: table; }
+
+  .bubble.system-label {
+    align-self: center;
+    background: #E1F2FA;
+    color: #375266;
+    font-size: 0.6875rem;
+    border-radius: 8px;
+    max-width: 92%;
+    text-align: center;
+  }
+
+  .img-bubble {
+    padding: 4px;
+    width: 78%;
+  }
+  .img-thumb {
+    border-radius: 6px;
+    width: 100%;
+    height: 130px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.625rem;
+    letter-spacing: 0.03em;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .img-thumb span { position: relative; z-index: 1; padding: 0 10px; }
+  .img-thumb.a { background: linear-gradient(150deg,#caa6a1,#5b3a34); }
+  .img-thumb.b { background: linear-gradient(150deg,#b9c7a8,#3f4e33); }
+  .img-caption { font-size: 0.6875rem; color: #444; padding: 4px 4px 2px; }
+
+  .doc-bubble-btn {
+    all: unset;
+    display: block;
+    width: 82%;
+    cursor: pointer;
+    align-self: flex-start;
+    margin-bottom: 7px;
+  }
+  .doc-bubble-btn .bubble { margin-bottom: 0; width: 100%; }
+  .doc-bubble-btn:hover .doc-row { background: rgba(0,0,0,0.02); }
+  .doc-bubble-btn:focus-visible { outline: 2px solid var(--wa-header); outline-offset: 2px; border-radius: 8px; }
+  .doc-bubble { padding: 8px; width: 100%; }
+  .doc-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .doc-chevron { color: #b7bdc2; font-size: 1.1rem; margin-left: auto; flex-shrink: 0; }
+  .doc-icon {
+    width: 42px; height: 52px;
+    background: var(--red-ink);
+    border-radius: 3px;
+    color: #fff;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.55rem;
+    font-weight: 600;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 5px;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+  }
+  .doc-meta { min-width: 0; }
+  .doc-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #111;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .doc-sub { font-size: 0.6875rem; color: #7a7a7a; margin-top: 2px; }
+  .doc-caption { font-size: 0.75rem; color: #222; margin-top: 8px; line-height: 1.4; }
+
+  .btn-msg {
+    align-self: flex-start;
+    max-width: 87%;
+    margin-bottom: 7px;
+  }
+  .btn-msg .bubble { margin-bottom: 1px; }
+  .btn-list { display: flex; flex-direction: column; }
+  .btn-list button {
+    all: unset;
+    background: var(--wa-bubble);
+    color: #00A5F4;
+    text-align: center;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 9px 10px;
+    border-top: 1px solid #ECECEC;
+    box-shadow: 0 1px 1px var(--wa-bubble-shadow);
+    cursor: default;
+  }
+  .btn-list button:first-child { border-radius: 0; }
+  .btn-list button:last-child { border-radius: 0 0 8px 8px; }
+
+  .wa-inputbar {
+    background: transparent;
+    padding: 8px 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .wa-input-pill {
+    flex: 1;
+    background: var(--wa-input-bg);
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 0.8125rem;
+    color: #8b8b8b;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .wa-mic {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--wa-header);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.95rem;
+    flex-shrink: 0;
+  }
+
+  /* ---- in-phone PDF viewer overlay ---- */
+  .doc-viewer-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    background: var(--wa-chat-bg);
+    opacity: 0;
+    transform: translateY(10px);
+    pointer-events: none;
+    transition: opacity 0.22s ease, transform 0.22s ease;
+  }
+  .doc-viewer-overlay.open { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  @media (prefers-reduced-motion: reduce) {
+    .doc-viewer-overlay { transition: none; }
+  }
+  .dv-header {
+    background: #FFFFFF;
+    border-bottom: 1px solid #E4E4E4;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .dv-back {
+    all: unset;
+    cursor: pointer;
+    font-size: 1.15rem;
+    color: #111;
+    padding: 4px 6px 4px 2px;
+    line-height: 1;
+  }
+  .dv-back:focus-visible { outline: 2px solid var(--wa-header); outline-offset: 2px; border-radius: 4px; }
+  .dv-title { flex: 1; min-width: 0; }
+  .dv-name {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #111;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .dv-sub { font-size: 0.6875rem; color: #7a7a7a; margin-top: 1px; }
+  .dv-icons { display: flex; gap: 14px; font-size: 1rem; color: var(--wa-icon); flex-shrink: 0; }
+  .dv-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 10px 24px;
+  }
+
+  /* ---- ledger document preview (Register B) ---- */
+  .sheet {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    padding: 1.1rem 1rem;
+    font-family: "IBM Plex Mono", monospace;
+  }
+  .sheet-brand {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .sheet-brand .wordmark {
+    font-family: "Fraunces", serif;
+    font-weight: 600;
+    font-size: 1.15rem;
+    letter-spacing: -0.01em;
+    font-variation-settings: "SOFT" 20;
+  }
+  .sheet-brand .doc-label {
+    font-size: 0.6875rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+  .sheet-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.6875rem;
+    color: var(--ink-soft);
+    margin-bottom: 1.4rem;
+    flex-wrap: wrap;
+    gap: 0.3rem 1rem;
+  }
+  .sheet-meta b { color: var(--ink); }
+
+  table.ledger-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  table.ledger-table th {
+    text-align: left;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-size: 0.625rem;
+    color: var(--ink-soft);
+    border-bottom: 1px solid var(--ink);
+    padding: 0 0 0.4rem;
+  }
+  table.ledger-table th.num, table.ledger-table td.num { text-align: right; }
+  table.ledger-table td {
+    padding: 0.55rem 0 0.55rem;
+    border-bottom: 1px solid var(--ledger-line);
+    vertical-align: top;
+  }
+  table.ledger-table td.desc .label { color: var(--ink); font-weight: 500; }
+  table.ledger-table td.desc .detail { color: var(--ink-soft); font-size: 0.6875rem; display: block; margin-top: 0.15rem; }
+  .ledger-total-row td {
+    border-bottom: none;
+    padding-top: 0.9rem;
+    font-weight: 600;
+  }
+  .ledger-total-row .num { color: var(--red-ink); font-size: 0.9375rem; }
+  .ledger-note {
+    font-size: 0.6875rem;
+    color: var(--ink-soft);
+    margin-top: 0.35rem;
+    font-family: "Instrument Sans", sans-serif;
+  }
+
+  .sheet-section { margin-top: 1.4rem; }
+  .sheet-section h4 {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+    margin: 0 0 0.4rem;
+    font-weight: 500;
+  }
+  .sheet-section p {
+    font-family: "Instrument Sans", sans-serif;
+    font-size: 0.8125rem;
+    color: var(--ink);
+    margin: 0;
+    line-height: 1.55;
+  }
+  .sheet-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.1rem;
+  }
+  .sheet-signoff {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px dashed var(--ledger-line);
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+  }
+  .sheet-signoff .sig-name { font-family: "Fraunces", serif; font-style: italic; font-size: 1.1rem; }
+  .sheet-photos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+  }
+  .sheet-photos .img-thumb { height: 90px; }
+  .sheet-p2note {
+    margin-top: 0.6rem;
+    font-size: 0.6875rem;
+    color: var(--ink-soft);
+    font-family: "Instrument Sans", sans-serif;
+    font-style: italic;
+  }
+
+  /* ---- notes card under each column ---- */
+  .note-card {
+    margin-top: 1.75rem;
+    background: var(--icing);
+    border-radius: 4px;
+    padding: 1.25rem 1.4rem;
+  }
+  .note-card h3 {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+    margin: 0 0 0.6rem;
+    font-weight: 500;
+  }
+  .note-card ul { margin: 0; padding-left: 1.1rem; font-size: 0.875rem; color: var(--ink); }
+  .note-card li { margin-bottom: 0.35rem; }
+  .note-card li:last-child { margin-bottom: 0; }
+
+  /* ---- comparison ledger table ---- */
+  .verdict {
+    margin-top: 5rem;
+  }
+  .verdict h2 {
+    font-family: "Fraunces", serif;
+    font-variation-settings: "SOFT" 30;
+    font-size: 1.6rem;
+    font-weight: 500;
+    margin: 0 0 0.4rem;
+  }
+  .verdict > p { color: var(--ink-soft); margin: 0 0 1.75rem; max-width: 42rem; }
+
+  .vtable-wrap { overflow-x: auto; }
+  table.vtable {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 640px;
+  }
+  table.vtable th, table.vtable td {
+    text-align: left;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+    font-size: 0.875rem;
+  }
+  table.vtable thead th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.6875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0.6rem;
+  }
+  table.vtable td:first-child { color: var(--ink-soft); width: 15rem; font-size: 0.8125rem; }
+  table.vtable tbody tr:last-child td { border-bottom: none; }
+
+  footer.foot-note {
+    margin-top: 5rem;
+    padding-top: 1.75rem;
+    border-top: 1px solid var(--rule);
+    font-size: 0.8125rem;
+    color: var(--ink-soft);
+    max-width: 46rem;
+  }
+  footer.foot-note strong { color: var(--ink); }
+</style>
+
+<div class="wrap">
+
+  <header class="page-head">
+    <p class="eyebrow">Internal preview — nothing is wired up yet</p>
+    <h1>How should an order land on WhatsApp?</h1>
+    <p>Two ways the same enquiry could arrive on the bakery's phone once the order form sends to WhatsApp. <strong>Both are mockups</strong> built from a real sample order — no messages have actually been sent. Pick a direction and we'll build it for real.</p>
+    <div class="ref-strip">
+      <span>Sample order: <b>Naledi Khumalo</b></span>
+      <span>Ref: <b>OCD&#8209;2026&#8209;0847</b></span>
+      <span>Needed for: <b>14/11/2026</b></span>
+      <span>Submitted: <b>Wed 26 Aug, 14:32</b></span>
+    </div>
+  </header>
+
+  <div class="compare">
+
+    <!-- ============ VERSION 1 — MESSAGES ============ -->
+    <article>
+      <div class="col-head">
+        <span class="col-tag">Option 1</span>
+        <h2 class="col-title">Sent as messages</h2>
+        <p class="col-desc">One formatted text message, then the reference photos as their own image messages.</p>
+      </div>
+
+      <div class="phone-shell">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="wa-status"><span>9:41</span><span>&#128246; &#128246; &#128267;</span></div>
+            <div class="wa-header-bar">
+              <span class="wa-back">&#8592;</span>
+              <div class="wa-avatar">&#129472;</div>
+              <div class="wa-id">
+                <div class="wa-name">OCD Website &middot; Orders</div>
+                <div class="wa-sub">Business account</div>
+              </div>
+              <div class="wa-icons"><span>&#128222;</span><span>&#8942;</span></div>
+            </div>
+            <div class="wa-chat">
+              <div class="wa-daychip">TODAY</div>
+
+              <div class="bubble">
+                <div class="msg-text">&#127874; <b>New order &mdash; OCD website</b>
+<b>Ref:</b> OCD-2026-0847
+<b>Received:</b> Wed 26 Aug, 14:32
+
+<b>Customer:</b> Naledi Khumalo
+<b>WhatsApp:</b> 082 555 0143
+<b>Email:</b> naledi.k@gmail.com
+<b>Found us via:</b> Instagram
+
+<b>Occasion:</b> Birthday
+<b>Needed for:</b> 14/11/2026
+
+<b>Cake:</b> Single tier, 20cm round &mdash; 35&ndash;40 servings
+<b>Flavour:</b> Belgian Chocolate
+<b>Cupcakes:</b> 3 dozen &mdash; Lemon and Blueberry
+<b>Extras:</b> French Macarons &times;1 set of 12 &mdash; "blush pink, matching theme"
+
+<b>Design tier:</b> Detailed
+<i>Blush pink and gold, semi-naked with fresh florals. Gold script topper reading "Happy 30th Naledi". 2 reference photos below.</i>
+
+<b>Delivery:</b> 14 Silverwood Close, Kloof, 3610
+
+<b>Note from customer:</b>
+<i>It's a surprise party &mdash; please WhatsApp only, don't call!</i>
+
+<b>Estimated range:</b> R4 200 and up
+<i>Not final &mdash; confirmed once we've chatted about the design.</i>
+
+Signed by Naledi Khumalo &#10003; terms agreed</div>
+                <div class="msg-time">14:32</div>
+              </div>
+
+              <div class="bubble img-bubble">
+                <div class="img-thumb a"><span>pinterest_cake_inspo.jpg</span></div>
+                <div class="img-caption">Reference 1 of 2</div>
+                <div class="msg-time">14:32</div>
+              </div>
+
+              <div class="bubble img-bubble">
+                <div class="img-thumb b"><span>flower_arch_ref.png</span></div>
+                <div class="img-caption">Reference 2 of 2</div>
+                <div class="msg-time">14:32</div>
+              </div>
+
+              <div class="btn-msg">
+                <div class="bubble">
+                  <div class="msg-text">What would you like to do with this order?</div>
+                </div>
+                <div class="btn-list">
+                  <button type="button">&#128172; Message Naledi</button>
+                  <button type="button">&#9989; Mark as quoted</button>
+                </div>
+              </div>
+
+            </div>
+            <div class="wa-inputbar">
+              <div class="wa-input-pill"><span>Message</span><span>&#128512;</span></div>
+              <div class="wa-mic">&#127908;</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note-card">
+        <h3>What this is</h3>
+        <ul>
+          <li>Everything readable the instant the chat opens — no tapping.</li>
+          <li>Text stays searchable inside WhatsApp later ("Naledi", "14 Nov"…).</li>
+          <li>Photos arrive full-resolution and swipeable, same as any photo sent to her.</li>
+          <li>Quick-reply buttons are a WhatsApp Business API feature — shown here as an example of what's possible, not a committed detail.</li>
+        </ul>
+      </div>
+    </article>
+
+    <!-- ============ VERSION 2 — DOCUMENT ============ -->
+    <article>
+      <div class="col-head">
+        <span class="col-tag">Option 2</span>
+        <h2 class="col-title">Sent as a document</h2>
+        <p class="col-desc">A short heads-up message, then the whole order — brief, ledger and reference photos — bundled into one PDF.</p>
+      </div>
+
+      <div class="phone-shell">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="wa-status"><span>9:41</span><span>&#128246; &#128246; &#128267;</span></div>
+            <div class="wa-header-bar">
+              <span class="wa-back">&#8592;</span>
+              <div class="wa-avatar">&#129472;</div>
+              <div class="wa-id">
+                <div class="wa-name">OCD Website &middot; Orders</div>
+                <div class="wa-sub">Business account</div>
+              </div>
+              <div class="wa-icons"><span>&#128222;</span><span>&#8942;</span></div>
+            </div>
+            <div class="wa-chat">
+              <div class="wa-daychip">TODAY</div>
+
+              <div class="bubble">
+                <div class="msg-text">&#127874; <b>New order &mdash; OCD website</b>
+<b>Ref:</b> OCD-2026-0847 &middot; Naledi Khumalo &middot; needed 14/11/2026
+
+Full brief, ledger and reference photos are in the attached PDF.</div>
+                <div class="msg-time">14:32</div>
+              </div>
+
+              <button type="button" class="doc-bubble-btn" onclick="document.getElementById('pdf-overlay').classList.add('open')" aria-haspopup="dialog">
+                <div class="bubble doc-bubble">
+                  <div class="doc-row">
+                    <div class="doc-icon">PDF</div>
+                    <div class="doc-meta">
+                      <div class="doc-name">OCD-Order-0847-Naledi-Khumalo.pdf</div>
+                      <div class="doc-sub">PDF &middot; 412 KB &middot; tap to open</div>
+                    </div>
+                    <div class="doc-chevron">&#8250;</div>
+                  </div>
+                  <div class="msg-time">14:32</div>
+                </div>
+              </button>
+
+            </div>
+            <div class="wa-inputbar">
+              <div class="wa-input-pill"><span>Message</span><span>&#128512;</span></div>
+              <div class="wa-mic">&#127908;</div>
+            </div>
+
+            <div class="doc-viewer-overlay" id="pdf-overlay" role="dialog" aria-label="PDF preview">
+              <div class="dv-header">
+                <button type="button" class="dv-back" onclick="document.getElementById('pdf-overlay').classList.remove('open')" aria-label="Close PDF preview">&#8592;</button>
+                <div class="dv-title">
+                  <div class="dv-name">OCD-Order-0847-Naledi-Khumalo.pdf</div>
+                  <div class="dv-sub">PDF &middot; 412 KB &middot; 2 pages</div>
+                </div>
+                <div class="dv-icons"><span>&#8681;</span><span>&#8942;</span></div>
+              </div>
+              <div class="dv-body">
+                <div class="sheet">
+                  <div class="sheet-brand">
+                    <span class="wordmark">OCD</span>
+                    <span class="doc-label">Page 1 of 2</span>
+                  </div>
+                  <div class="sheet-meta">
+                    <span>Ref <b>OCD-2026-0847</b></span>
+                    <span>Needed for <b>14/11/2026</b></span>
+                  </div>
+
+                  <table class="ledger-table">
+                    <thead>
+                      <tr><th>Item</th><th class="num">Qty</th><th class="num">From</th></tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td class="desc"><span class="label">Single tier cake</span><span class="detail">20cm round &middot; 35&ndash;40 servings &middot; Belgian Chocolate</span></td>
+                        <td class="num">1</td>
+                        <td class="num">R2 500</td>
+                      </tr>
+                      <tr>
+                        <td class="desc"><span class="label">Gourmet cupcakes</span><span class="detail">Lemon and Blueberry</span></td>
+                        <td class="num">3 doz</td>
+                        <td class="num">R1 350</td>
+                      </tr>
+                      <tr>
+                        <td class="desc"><span class="label">French macarons</span><span class="detail">Blush pink, matching theme</span></td>
+                        <td class="num">1 set</td>
+                        <td class="num">R350</td>
+                      </tr>
+                      <tr class="ledger-total-row">
+                        <td class="desc"><span class="label">Estimated range</span></td>
+                        <td></td>
+                        <td class="num">R4 200+</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <p class="ledger-note">Design complexity can move this beyond the floor above — not final until confirmed.</p>
+
+                  <div class="sheet-section sheet-grid">
+                    <div>
+                      <h4>Design brief</h4>
+                      <p>Detailed tier. Blush pink and gold, semi-naked with fresh florals. Gold script topper reading &ldquo;Happy 30th Naledi&rdquo;.</p>
+                    </div>
+                    <div>
+                      <h4>Delivery</h4>
+                      <p>14 Silverwood Close, Kloof, 3610</p>
+                    </div>
+                    <div>
+                      <h4>Customer note</h4>
+                      <p>It's a surprise party &mdash; WhatsApp only, please don't call.</p>
+                    </div>
+                  </div>
+
+                  <div class="sheet-section">
+                    <h4>Customer details</h4>
+                    <p>Naledi Khumalo &middot; 082 555 0143 &middot; naledi.k@gmail.com &middot; found us via Instagram</p>
+                  </div>
+
+                  <div class="sheet-signoff">
+                    <span>Signed</span>
+                    <span class="sig-name">Naledi Khumalo</span>
+                  </div>
+
+                  <div class="sheet-section">
+                    <h4>Page 2 &mdash; reference photos</h4>
+                    <div class="sheet-photos">
+                      <div class="img-thumb a"><span>pinterest_cake_inspo.jpg</span></div>
+                      <div class="img-thumb b"><span>flower_arch_ref.png</span></div>
+                    </div>
+                    <p class="sheet-p2note">Full resolution in the PDF.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="note-card">
+        <h3>What this is</h3>
+        <ul>
+          <li>One tap to open the whole order &mdash; brief, ledger and photos as a second page.</li>
+          <li>Reads like a proper booking confirmation, easy to forward to a helper or supplier.</li>
+          <li>The text inside the PDF isn't searchable from WhatsApp's chat search.</li>
+          <li>Needs a small build step to turn each submission into a formatted PDF (or a Google Doc from a template) before it sends.</li>
+        </ul>
+      </div>
+    </article>
+
+  </div>
+
+  <section class="verdict">
+    <h2>Weighing it up</h2>
+    <p>Same order, two formats. This is the actual trade-off &mdash; not a recommendation either way.</p>
+    <div class="vtable-wrap">
+      <table class="vtable">
+        <thead>
+          <tr><th>&nbsp;</th><th>As messages</th><th>As a document</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Opening it</td><td>Reads immediately, no tap</td><td>One tap to open the PDF</td></tr>
+          <tr><td>Finding it again</td><td>Searchable in WhatsApp chat search</td><td>Lives inside the file, not searchable from chat</td></tr>
+          <tr><td>Forwarding to someone else</td><td>Several messages to forward together</td><td>One file, forwards in one go</td></tr>
+          <tr><td>Reference photos</td><td>Full resolution, swipeable in the chat</td><td>Bundled onto page 2 of the PDF</td></tr>
+          <tr><td>First impression</td><td>Reads like a very organised customer texted you</td><td>Reads like a booking confirmation or invoice</td></tr>
+          <tr><td>To build (Phase 2)</td><td>Text + image messages via the WhatsApp Business API</td><td>Same API, plus a PDF-from-template step before sending</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="foot-note">
+    <strong>Nothing here is live.</strong> Both mockups use one made-up sample order to show the shape of each option. Once a direction is picked, this becomes real Phase 2 work: server action, the WhatsApp Business API, and &mdash; for Option 2 &mdash; the PDF template.
+  </footer>
+
+</div>

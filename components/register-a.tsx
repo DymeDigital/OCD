@@ -7,13 +7,15 @@ export function SectionA({
   children,
   eyebrow,
   className = "",
+  id,
 }: {
   children: ReactNode;
   eyebrow?: string;
   className?: string;
+  id?: string;
 }) {
   return (
-    <section className={`mx-auto max-w-[1280px] px-6 py-24 md:px-12 md:py-32 ${className}`}>
+    <section id={id} className={`mx-auto max-w-[1280px] scroll-mt-24 px-6 py-24 md:px-12 md:py-32 ${className}`}>
       {eyebrow && <p className="label mb-4 text-ink-soft">{eyebrow}</p>}
       {children}
     </section>

@@ -35,11 +35,12 @@ export function computeOrderLedger(values: Partial<OrderFormValues>): Ledger {
 
   if ((values.productType === "cake" || values.productType === "both") && values.guestCount) {
     const candidates = sizesForServings(values.guestCount);
-    const match = candidates[0] ?? sizes.find((s) => s.servingsMax >= (values.guestCount ?? 0));
+    const chosen = values.sizeId ? candidates.find((s) => s.id === values.sizeId) : undefined;
+    const match = chosen ?? candidates[0] ?? sizes.find((s) => s.servingsMax >= (values.guestCount ?? 0));
     if (match) {
       lines.push({
-        label: `${match.tierLabel} cake`,
-        detail: `${match.sizesCm.map((c) => `${c}cm`).join(", ")} — ${match.servingsMin}–${match.servingsMax} servings`,
+        label: match.ledgerLabel ?? `${match.tierLabel} cake`,
+        detail: `${match.sizesCm.map((c) => `${c}cm`).join(", ")}${match.layersNote ? ` (${match.layersNote})` : ""} — ${match.servingsMin}–${match.servingsMax} servings`,
         amount: match.priceFrom,
       });
       priceFrom += match.priceFrom;
@@ -72,7 +73,7 @@ export function computeWeddingLedger(values: Partial<WeddingOrderFormValues>): L
   let priceFrom = 0;
 
   if (values.tierCount) {
-    const tierSizes = sizes.filter((s) => s.tier === values.tierCount);
+    const tierSizes = sizes.filter((s) => s.tier === values.tierCount && s.weddingEligible !== false);
     const exactMatch = values.guestCount
       ? tierSizes.find((s) => values.guestCount! >= s.servingsMin && values.guestCount! <= s.servingsMax)
       : undefined;

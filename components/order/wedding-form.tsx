@@ -10,8 +10,11 @@ import { flavours, egglessFlavourIds } from "@/content/data/flavours";
 import { weddingTerms } from "@/content/data/terms";
 import { LedgerPanel } from "@/components/order/ledger-panel";
 import { ImageUpload } from "@/components/order/image-upload";
+import { TermsStep } from "@/components/order/terms-step";
+import { SubmitFallback } from "@/components/order/submit-fallback";
 import { TextField, TextAreaField, SelectField, RadioCardGroup, CheckboxCardGroup } from "@/components/order/fields";
 import { Button } from "@/components/button";
+import { buildOrderPlainText, type OrderSummaryInput } from "@/lib/order-summary";
 
 const STORAGE_KEY = "ocd-wedding-order-draft";
 
@@ -25,6 +28,7 @@ const steps = [
   "Planner & dietary",
   "Delivery",
   "Your details",
+  "Terms & sign",
   "Review",
 ] as const;
 
@@ -34,6 +38,13 @@ export function WeddingForm() {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [files, setFiles] = useState<File[]>([]);
+  const [submitFallback, setSubmitFallback] = useState<{ summaryText: string; token: string | null } | null>(
+    null
+  );
+  // Anti-spam, checked server-side: a honeypot field bots fill and humans never see, and the time
+  // the form first rendered (submitting in under 3s reads as automated).
+  const [honeypot, setHoneypot] = useState("");
+  const [mountedAt] = useState(() => Date.now());
 
   const form = usePersistedForm<WeddingOrderFormValues>(STORAGE_KEY, zodResolver(weddingOrderSchema), {
     fauxTierCount: 0,
@@ -41,6 +52,7 @@ export function WeddingForm() {
     dietaryOptions: [],
     tastingWanted: false,
     deliveryMode: "delivery",
+    agreedToTerms: false,
   } as unknown as WeddingOrderFormValues);
 
   const values = form.watch();
@@ -71,6 +83,7 @@ export function WeddingForm() {
     [],
     ["deliveryMode", "address"],
     ["fullName", "contactNumber", "email"],
+    ["signatureName", "agreedToTerms"],
     [],
   ];
 
@@ -85,21 +98,55 @@ export function WeddingForm() {
   }
 
   async function onSubmit(data: WeddingOrderFormValues) {
-    const payload = {
-      ...data,
-      referenceImages: files.map((f) => ({ name: f.name, sizeKB: Math.round(f.size / 1024) })),
-      ledger,
-      submittedAt: new Date().toISOString(),
-    };
-    console.log("[OCD wedding order submission — demo, not sent]", payload);
-    clearPersistedForm(STORAGE_KEY);
-    await new Promise((r) => setTimeout(r, 600));
-    router.push("/order/thank-you");
+    const summaryInput: OrderSummaryInput = { token: null, kind: "wedding", data, ledger };
+
+    const body = new FormData();
+    body.set("kind", "wedding");
+    body.set("data", JSON.stringify(data));
+    body.set("company", honeypot);
+    body.set("renderedAt", String(mountedAt));
+    files.forEach((file) => body.append("files", file));
+
+    try {
+      const res = await fetch("/api/submit-order", { method: "POST", body });
+      if (!res.ok) throw new Error(`submit-order responded ${res.status}`);
+      const result = (await res.json()) as { token: string; whatsappSent: boolean; emailSent: boolean };
+
+      const delivered = result.whatsappSent || result.emailSent;
+      if (!delivered) {
+        const orderUrl = result.token ? `${window.location.origin}/o/${result.token}` : null;
+        setSubmitFallback({
+          summaryText: buildOrderPlainText({ ...summaryInput, token: result.token || null }, orderUrl),
+          token: result.token || null,
+        });
+        return;
+      }
+
+      clearPersistedForm(STORAGE_KEY);
+      router.push(`/order/thank-you?token=${result.token}`);
+    } catch {
+      setSubmitFallback({ summaryText: buildOrderPlainText(summaryInput, null), token: null });
+    }
+  }
+
+  if (submitFallback) {
+    return <SubmitFallback summaryText={submitFallback.summaryText} token={submitFallback.token} />;
   }
 
   return (
     <div className="grid gap-12 lg:grid-cols-[1fr_360px]">
       <form onSubmit={form.handleSubmit(onSubmit)} noValidate>
+        {/* Honeypot — hidden from people, left for bots to fill. Not part of the form schema. */}
+        <input
+          type="text"
+          name="company"
+          value={honeypot}
+          onChange={(e) => setHoneypot(e.target.value)}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0 }}
+        />
         <div className="mb-8 flex items-center justify-between">
           <p className="label text-ink-soft">
             Step {step + 1} of {steps.length} — {steps[step]}
@@ -257,10 +304,26 @@ export function WeddingForm() {
         )}
 
         {step === 9 && (
+          <TermsStep
+            kind="wedding"
+            fullName={values.fullName}
+            signatureName={values.signatureName}
+            signatureNameRegister={form.register("signatureName")}
+            signatureNameError={form.formState.errors.signatureName?.message}
+            agreedToTermsRegister={form.register("agreedToTerms")}
+            agreedError={form.formState.errors.agreedToTerms?.message}
+            onPrefillSignature={(name) => form.setValue("signatureName", name)}
+          />
+        )}
+
+        {step === 10 && (
           <div>
             <p className="text-ink-soft">
               Wedding cakes get a closer look before we quote — send this through and we&apos;ll
               come back to you within 24 hours to start the design conversation.
+            </p>
+            <p className="mt-3 text-sm text-ink-soft">
+              Signed by {values.signatureName || values.fullName}.
             </p>
             {files.length > 0 && (
               <p className="mt-3 text-sm text-ink-soft">

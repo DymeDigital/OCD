@@ -33,6 +33,18 @@ const contactFields = {
   foundUs: optionalEnum(foundUsOptions),
 };
 
+// The order form's closing step (§9 step 9 / wedding equivalent): a typed signature plus an
+// explicit agreement checkbox, standing in for the client's paper "Client Acknowledgement" /
+// "Acknowledgment & Acceptance" sign-off. `agreedToTerms` must be `true`, not just any boolean —
+// `.refine` (not `z.literal(true)`) so an unchecked box still reaches the schema as `false` rather
+// than failing to parse at all, which lets the error message attach to the field like every other.
+const signatureFields = {
+  signatureName: z.string().trim().min(2, "Type your full name to sign."),
+  agreedToTerms: z
+    .boolean()
+    .refine((v) => v === true, { message: "Please confirm you agree to the terms before sending your order." }),
+};
+
 const deliveryFields = {
   deliveryMode: z.enum(deliveryModes),
   address: z.string().trim().optional(),
@@ -53,6 +65,9 @@ const orderObjectSchema = z.object({
 
   // Cake branch
   guestCount: z.number().int().min(1).optional(),
+  // Only meaningful when more than one size fits the guest count (e.g. a mini cake and a bento
+  // box both fit) — lets the customer pick between them instead of always getting the cheapest.
+  sizeId: z.string().optional(),
   cakeShape: optionalEnum(cakeShapes),
   cakeFlavourIds: z.array(z.string()).default([]),
 
@@ -72,6 +87,7 @@ const orderObjectSchema = z.object({
   notes: z.string().trim().optional(),
   ...deliveryFields,
   ...contactFields,
+  ...signatureFields,
 });
 
 export const orderSchema = orderObjectSchema
@@ -117,6 +133,7 @@ const weddingObjectSchema = z.object({
   notes: z.string().trim().optional(),
   ...deliveryFields,
   ...contactFields,
+  ...signatureFields,
 });
 
 export const weddingOrderSchema = weddingObjectSchema

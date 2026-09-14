@@ -1,53 +1,15 @@
 import type { Metadata } from "next";
 import { SectionA } from "@/components/register-a";
 import { Reveal } from "@/components/reveal";
-import { standardTerms, weddingTerms } from "@/content/data/terms";
+import { ButtonLink } from "@/components/button";
+import { FaqRow } from "@/components/faq-accordion";
+import { faqCategories } from "@/content/data/faq";
 
 export const metadata: Metadata = {
   title: "FAQ",
-  description: "Lead times, delivery, deposits, cancellations, and allergens — the real terms, plainly stated.",
+  description:
+    "The real terms, plainly stated — ordering, weddings, cupcakes, dietary requirements, delivery, cake care and payments.",
 };
-
-const faqs = [
-  {
-    q: "How far in advance do I need to order?",
-    a: `All standard orders need at least ${standardTerms.minLeadTimeDays} days' notice. Wedding cakes need more — final guest counts and design details are due at least ${weddingTerms.guestCountDeadlineDays} days before the wedding, so the earlier we start talking, the more room we have.`,
-  },
-  {
-    q: "How does pricing work?",
-    a: "Every price you see on this site is a starting range, not a final number — the exact price depends on your servings and design. Once we've talked through the details, we'll come back with a real quote.",
-  },
-  {
-    q: "Do you deliver?",
-    a: `${standardTerms.deliveryPricing} We'll confirm delivery areas and fees when you get in touch.`,
-  },
-  {
-    q: "What's required to confirm my order?",
-    a: `Full payment confirms a standard order, with ${standardTerms.depositPortion * 100}% of that counted as a non-refundable deposit. ${standardTerms.proofOfPayment}`,
-  },
-  {
-    q: "What if I need to cancel a standard order?",
-    a: null,
-    list: standardTerms.cancellation.tiers.map(
-      (t) => `${t.noticeDays} before collection/delivery: ${t.creditPercent}% credit voucher (valid ${standardTerms.cancellation.voucherValidityMonths} months).`
-    ),
-    note: standardTerms.cancellation.note,
-  },
-  {
-    q: "What if I need to cancel a wedding order?",
-    a: null,
-    list: weddingTerms.cancellation.tiers.map((t) => `${t.noticeDays}: ${t.outcome}`),
-    note: weddingTerms.cancellation.note,
-  },
-  {
-    q: "Can you cater for allergies?",
-    a: weddingTerms.allergenNote,
-  },
-  {
-    q: "Do you offer tastings?",
-    a: "Ask us when you get in touch — we'll let you know what's available for your event.",
-  },
-];
 
 export default function FaqPage() {
   return (
@@ -58,29 +20,47 @@ export default function FaqPage() {
             The real terms, plainly stated.
           </h1>
           <p className="mt-6 max-w-xl text-lg text-ink-soft">
-            Everything below matches what&apos;s in our order form and wedding contract — nothing
-            here is simplified away.
+            Everything you need to know about ordering from OCD — from bespoke cakes and weddings
+            to cupcakes, signature confections, delivery and cake care.
           </p>
+          <nav aria-label="Jump to a topic" className="mt-10 flex flex-wrap gap-x-6 gap-y-2">
+            {faqCategories.map((cat) => (
+              <a key={cat.id} href={`#${cat.id}`} className="label text-ink-soft hover:text-ink">
+                {cat.title}
+              </a>
+            ))}
+          </nav>
         </SectionA>
       </Reveal>
 
+      {faqCategories.map((cat) => (
+        <Reveal key={cat.id}>
+          <SectionA className="pt-0" id={cat.id}>
+            <h2 className="font-display text-xl font-medium">{cat.title}</h2>
+            <div className="mt-6 border-t border-rule">
+              {cat.items.map((item) => (
+                <FaqRow key={item.q} item={item} />
+              ))}
+            </div>
+          </SectionA>
+        </Reveal>
+      ))}
+
       <Reveal>
-        <SectionA className="pt-0">
-          <div className="divide-y divide-rule border-t border-rule">
-            {faqs.map((item) => (
-              <div key={item.q} className="py-8">
-                <h2 className="font-display text-lg font-medium">{item.q}</h2>
-                {item.a && <p className="mt-3 max-w-2xl text-ink-soft">{item.a}</p>}
-                {item.list && (
-                  <ul className="mt-3 max-w-2xl list-disc space-y-1 pl-5 text-ink-soft">
-                    {item.list.map((line) => (
-                      <li key={line}>{line}</li>
-                    ))}
-                  </ul>
-                )}
-                {item.note && <p className="mt-3 max-w-2xl text-sm text-ink-soft">{item.note}</p>}
-              </div>
-            ))}
+        <SectionA className="pt-0 text-center">
+          <div className="mx-auto max-w-xl border-t border-rule pt-16">
+            <p className="label text-ink-soft">Still have a question?</p>
+            <h2 className="mt-3 font-display text-xl font-medium">
+              Tell us what you&apos;re dreaming up.
+            </h2>
+            <p className="mt-3 text-ink-soft">
+              No problem. The easiest way to get started is to submit an online order request —
+              tell us your preferred date and as much detail as possible, and we&apos;ll review it
+              and get back to you.
+            </p>
+            <ButtonLink href="/order" className="mt-8">
+              Start your order
+            </ButtonLink>
           </div>
         </SectionA>
       </Reveal>

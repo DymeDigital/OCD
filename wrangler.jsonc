@@ -1,0 +1,52 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"main": ".open-next/worker.js",
+	"name": "ocd",
+	"compatibility_date": "2026-09-07",
+	"compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+	// Secrets (not vars — never checked in). Set each in production with `wrangler secret put <NAME>`,
+	// and locally in `.dev.vars` (see `.dev.vars.example`):
+	//   RESEND_API_KEY, ORDER_EMAIL_FROM, ORDER_EMAIL_TO, SITE_URL   — interim email channel
+	//   WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_OWNER_NUMBER, WHATSAPP_TEMPLATE_NAME
+	//   ORDER_PHOTOS_PUBLIC_URL                                       — R2 bucket public base URL
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"services": [
+		{
+			// Self-reference service binding, the service name must match the worker name
+			// see https://opennext.js.org/cloudflare/caching
+			"binding": "WORKER_SELF_REFERENCE",
+			"service": "ocd"
+		}
+	],
+	"r2_buckets": [
+		// OpenNext's own ISR/data cache — not app data.
+		{
+			"binding": "NEXT_INC_CACHE_R2_BUCKET",
+			"bucket_name": "ocd-opennext-cache"
+		},
+		// App data: reference-photo uploads from the order forms (CLAUDE.md §9).
+		// Create with: npx wrangler r2 bucket create ocd-order-photos
+		{
+			"binding": "ORDER_PHOTOS",
+			"bucket_name": "ocd-order-photos",
+			"remote": true
+		}
+	],
+	"kv_namespaces": [
+		// App data: one record per submitted order, keyed by its unguessable token (/o/[token]).
+		// Create with: npx wrangler kv namespace create ORDERS
+		// then replace the id below with the one the command prints.
+		{
+			"binding": "ORDERS",
+			"id": "800a90f73141432b91dc7453e2d5966f"
+		}
+	],
+	"images": {
+		// Enables Cloudflare Images-backed optimization for next/image.
+		// see https://opennext.js.org/cloudflare/howtos/image
+		"binding": "IMAGES"
+	}
+}

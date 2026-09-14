@@ -7,7 +7,13 @@ export const metadata: Metadata = {
   description: "We've got your order — here's what happens next.",
 };
 
-export default function ThankYouPage() {
+export default async function ThankYouPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ token?: string }>;
+}) {
+  const { token } = await searchParams;
+
   return (
     <SectionA eyebrow="Order received" className="text-center">
       <h1 className="mx-auto max-w-xl font-display text-2xl font-medium">
@@ -25,6 +31,13 @@ export default function ThankYouPage() {
           <li>3. Once you&apos;re happy, full payment confirms the booking.</li>
         </ol>
       </div>
+      {token && (
+        <div className="mt-8 flex justify-center">
+          <ButtonLink href={`/o/${token}`} variant="ghost">
+            View your order
+          </ButtonLink>
+        </div>
+      )}
       <div className="mt-10 flex justify-center gap-4">
         <ButtonLink href="/">Back home</ButtonLink>
         <ButtonLink href="/faq" variant="ghost">

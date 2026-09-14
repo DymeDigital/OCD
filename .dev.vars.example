@@ -1,0 +1,32 @@
+# Copy to `.dev.vars` for local `wrangler dev`/`next dev` — never commit the real file.
+# In production these are set with `wrangler secret put <NAME>`, not this file.
+
+# --- Email (Resend) — interim primary order channel -------------------------------------------
+# lib/email.ts emails the baker on every order. This is the channel that makes the site live now,
+# while the WhatsApp template below is still in Meta approval.
+#   1. Sign up at resend.com WITH THE ADDRESS ORDERS SHOULD GO TO (darrelrhyce@gmail.com).
+#      In test mode Resend only delivers to the account owner's own address — any other recipient
+#      is rejected with a 403. A verified sending domain lifts that; then only ORDER_EMAIL_FROM
+#      changes (e.g. "OCD orders <orders@yourdomain.co.za>").
+#   2. Create an API key at resend.com/api-keys.
+RESEND_API_KEY=
+ORDER_EMAIL_FROM=OCD orders <onboarding@resend.dev>
+# Comma-separated for more than one recipient.
+ORDER_EMAIL_TO=darrelrhyce@gmail.com
+# Deployed origin (no trailing slash) for the /o/[token] link in the email. Falls back to the
+# request origin if unset. Local: http://localhost:3000
+SITE_URL=
+
+# --- WhatsApp (Meta Cloud API) — flips on automatically once configured -----------------------
+# TODO(client): Meta WhatsApp Business Platform. The route SKIPS the WhatsApp send entirely while
+# WHATSAPP_ACCESS_TOKEN / WHATSAPP_TEMPLATE_NAME are unset, so email carries orders until then.
+WHATSAPP_ACCESS_TOKEN=
+WHATSAPP_PHONE_NUMBER_ID=
+# Digits only, country code first, no "+" or spaces (Cloud API "to" format) — the bakery's real
+# number is +27 84 973 5638 (content/data/socialLinks.ts), i.e. 27849735638.
+WHATSAPP_OWNER_NUMBER=27849735638
+WHATSAPP_TEMPLATE_NAME=new_order_notification
+
+# The ORDER_PHOTOS R2 bucket's public base URL (enable "public access" on the bucket in the
+# Cloudflare dashboard, e.g. via its r2.dev subdomain, or a custom domain — see lib/order-store.ts).
+ORDER_PHOTOS_PUBLIC_URL=https://pub-REPLACE-ME.r2.dev

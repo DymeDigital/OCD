@@ -83,32 +83,32 @@ Friendly, fun, warm. Like the baker herself texting you back. Short sentences. S
 
 ### Current phase: demo. No backend.
 
-We are building a **frontend demo to show the client** — the look, the hero, and the order form flow end to end. Nothing persists, nothing sends. Do not build server infrastructure yet.
+Originally scoped as a frontend-only demo (nothing persisted, nothing sent). That phase is done — order submission is now live, hosted on **Cloudflare Workers** rather than Vercel, chosen specifically for cost (Vercel's free tier is non-commercial-use only; Cloudflare's isn't, at this site's traffic). See §9 for the full submission design.
+
+**Submission channels.** **Email (Resend) is the interim primary channel** — it's what took the site live while the Meta WhatsApp template is in approval. `lib/email.ts` emails the baker on every order with the summary + `/o/[token]` link. **WhatsApp (Meta Cloud API) stays fully wired** and the route flips it on automatically once `WHATSAPP_ACCESS_TOKEN` / `WHATSAPP_TEMPLATE_NAME` are set; until then that send is skipped, not failed. The route treats the order as delivered if *either* channel succeeds. Both are best-effort — neither failing dead-ends the client (`<SubmitFallback>`).
 
 | | Choice | Notes |
 |---|---|---|
-| Framework | **Next.js (App Router) + TypeScript** | Static/client-rendered for now. Server actions are Phase 2. |
+| Framework | **Next.js (App Router) + TypeScript** | Deployed via the `@opennextjs/cloudflare` adapter, not Vercel. |
 | Styling | **Tailwind CSS** | Tokens from §5 mapped into `tailwind.config.ts`. No inline hex values in components, ever. |
-| Forms | **React Hook Form + Zod** | Zod schema is the single source of truth for validation. Write the real schema now — Phase 2 reuses it server-side unchanged. |
-| Form state | **`localStorage`** | Autosave and step persistence. Enough for the demo, and it's what we'd ship anyway. |
+| Forms | **React Hook Form + Zod** | Zod schema (`lib/schemas.ts`) is the single source of truth for validation, reused unchanged server-side in `app/api/submit-order/route.ts`. |
+| Form state | **`localStorage`** | Autosave and step persistence, kept even after a failed submit (see §9's fallback). |
 | UI motion | **Framer Motion** | Reveals and hovers only. Not the hero — see §6. |
 | Hero | **`<video>` element** | Plain HTML. No player library, no WebGL, no Three.js. |
 | Content data | **Typed TS files** in `/content/data/` | Per §8. Hand-authored from the client's PDFs. |
-| Deploy | **Vercel** preview link | That link is how the client reviews it. Keep it always working. |
+| Submission | **Email (Resend) now; Meta WhatsApp Cloud API when its template clears** | Both send the baker a summary + private `/o/[token]` link. `lib/email.ts`, `lib/whatsapp.ts`. Email is interim-primary; see the submission-channels note below. |
+| Order/photo storage | **Cloudflare KV + R2** | One KV record per order (`lib/order-store.ts`), reference photos in an R2 bucket. Chosen over Supabase/Airtable: same account as hosting, no extra vendor, and the order-detail link means the baker never needs to browse a list. |
+| Deploy | **Cloudflare Workers** | `wrangler.jsonc` + `open-next.config.ts`. `npm run cf:deploy`. Prerequisites in `.dev.vars.example`: a Resend API key (interim email channel) and, when ready, a Meta WhatsApp Business Platform account with an approved `new_order_notification` template. |
 
-**Demo-phase behaviour for the order form:** the full multi-step flow works, validation is real, the running ledger calculates properly, and "Send my order" routes to `/order/thank-you` after a short simulated delay. It sends nothing. `console.log` the assembled payload so we can eyeball the shape. Put a single line in the dev README noting submissions are stubbed — do not put a "this is a demo" banner in the UI, because the client needs to see the real thing.
+**Order form submission:** the full multi-step flow validates client-side, then `onSubmit` posts one multipart request (form fields + reference photos + anti-spam honeypot/timestamp) to `/api/submit-order`. The route re-validates against the same Zod schema, uploads photos to R2, saves the order to KV, then attempts the email send and (when configured) the WhatsApp send — the KV write happens *before* either send, so a durable order and working `/o/[token]` link exist even if both fail. On success (either channel delivered) the client routes to `/order/thank-you?token=…`; otherwise the form renders `<SubmitFallback>` in place — the order as copyable text plus a `wa.me` deep link — rather than a dead end, and the localStorage draft is kept until a submission actually succeeds.
 
-File uploads in the demo: accept them, show thumbnails and filenames in the ledger, hold them in memory. Don't upload anywhere.
+File uploads: client-side constraints live in `lib/upload-constraints.ts` (also enforced server-side, since the client can't be trusted) and travel to R2 via a direct multipart POST — Cloudflare Workers accept request bodies up to 100MB, so no separate presigned-upload step is needed the way it would be on a 4.5MB-limited platform.
 
-### Phase 2, once the demo is signed off
+### Deferred, not yet built
 
-Deliberately deferred. Don't scaffold these now — half-built backend is worse than none.
-
-- Server actions for submission
-- **Resend** (or the client's SMTP) for the two emails in §9
-- File uploads to Vercel Blob or S3 presigned URLs
-- Submission storage — Supabase, Airtable or Google Sheet, `TODO(client)`
-- **Keystatic** so the client can edit flavours, sizes, prices and availability herself without a code change
+- **A verified Resend sending domain** — email currently sends from Resend's shared `onboarding@resend.dev` test sender, which only delivers to the address that owns the Resend account. Verifying a domain lets it send from `orders@<domain>` to anyone; only `ORDER_EMAIL_FROM` changes.
+- **The client's own SMTP** — not planned; Resend covers it.
+- **Keystatic** so the client can edit flavours, sizes, prices and availability herself without a code change.
 
 Keep dependencies boring and few. No component library — the design is specific enough that a generic kit will fight us.
 
@@ -220,7 +220,8 @@ Total under 1.2s. Ease `cubic-bezier(0.16, 1, 0.3, 1)`. Below the fold: single s
 /weddings             Wedding cakes — softer, more editorial, tasting info
 /order                Cake & cupcake order form   ← primary conversion
 /order/wedding        Wedding cake order form
-/order/thank-you      Confirmation + what happens next + WhatsApp link
+/order/thank-you      Confirmation + what happens next + link to the order below
+/o/[token]            Private per-order receipt (§9) — noindex, not in navigation, WhatsApp-only
 /about                The baker's story, the obsessive-precision angle
 /faq                  Lead times, delivery areas, deposits, changes, allergens
 /contact              WhatsApp, email, Instagram, service area
@@ -295,19 +296,22 @@ The running ledger (§5) is visible from step 3 onward.
 
 Same engine, plus: partner names, venue + venue contact, wedding date and time, guest count, tiers and per-tier flavour, cake table setup, whether a tasting is wanted, planner/coordinator details, dietary requirements, and a longer design brief. Wedding leads are worth more — this form can afford to be longer, but it still needs the ledger and the autosave.
 
-### Submission — Phase 2, not the demo
+### Submission (live)
 
-For the demo, "Send my order" simulates and routes to the thank-you page (see §4). Build none of the below yet; it's recorded here so the form fields and Zod schema are designed to feed it.
+"Send my order" posts to `app/api/submit-order/route.ts` (Route Handler, not a server action — it needs to accept raw `File`s in one multipart request; see §4).
 
-Server action → **two emails**:
-1. **To the bakery:** subject `New order — {name} — {date needed}`. Plain, scannable HTML: every field in ledger layout, uploads as links, WhatsApp link that opens a reply thread with the client. This must be readable on a phone, because that's where it will be read.
-2. **To the client:** warm confirmation, a copy of what they submitted, "we'll come back to you within 24 hours," WhatsApp link.
+1. **Spam check** — reject (silently, empty token) if the honeypot field is filled or the form was submitted under 3s after it rendered. No CAPTCHA.
+2. **Validate** the JSON fields against `orderSchema`/`weddingOrderSchema` (unchanged from the client's copy) and the file count/size/type against `lib/upload-constraints.ts`.
+3. **Upload** each reference photo to the `ORDER_PHOTOS` R2 bucket (`lib/order-store.ts`'s `savePhoto`).
+4. **Save** the order to KV (`lib/order-store.ts`'s `saveOrder`), keyed by an unguessable `crypto.randomUUID()` token — *before* attempting either send, so a durable record and a working `/o/[token]` page exist even if the sends below fail.
+5. **Email the baker** (`lib/email.ts`, via Resend) — the interim primary channel: subject + summary body + a "View full order & photos" button to `/o/{token}`, `reply_to` set to the customer when they gave an email. Recipient is `ORDER_EMAIL_TO` (falls back to `socialLinks.email`).
+6. **Send a WhatsApp template** (`lib/whatsapp.ts`) to the bakery's number — same content shape, "View order" URL button to `/o/{token}`. **Skipped entirely** unless `WHATSAPP_ACCESS_TOKEN` + `WHATSAPP_TEMPLATE_NAME` are set, so an un-set-up deployment doesn't log a guaranteed failure per order. Must be a pre-approved Meta template (`TODO(client)`) — business-initiated messages can't be free-form text.
 
-Also write every submission to a store (Supabase, Airtable, or a Google Sheet — client's choice, `TODO(client)`) so nothing is ever lost to a bounced email.
+`/o/{token}` is a private, `noindex` Register-B page (`app/o/[token]/page.tsx`, `components/order/order-detail.tsx`) that reuses `LedgerPanel` and shows every field, the signature, and the full-resolution photos.
 
-Spam handling: honeypot field + timing check. **No CAPTCHA** — it costs more orders than it saves.
+Errors: the route never dead-ends the client. The response is `{token, whatsappSent, emailSent}`; if *neither* channel delivered (both `false`) the order is still safely in KV. A hard failure (validation, upload, storage) returns a non-2xx response. Either way the form renders `<SubmitFallback>` in place: the order as copyable plain text (same summary the send bodies are built from, `lib/order-summary.ts`) plus a `wa.me` deep link pre-filled with it. The localStorage draft is only cleared once a channel confirms delivery (`emailSent || whatsappSent`).
 
-Errors: if the email fails, do *not* show a dead end. Show the client their full order in copyable text plus a WhatsApp deep link with it pre-filled.
+**Not yet built:** with a verified Resend domain still pending, email sends from the shared test sender (see §4 "Deferred"). Anti-spam is honeypot + timing only — fine for launch traffic, but the endpoint is still public and unauthenticated and each accepted submission costs a Resend send (and a paid WhatsApp send once that's live); revisit if abuse shows up. **Still no CAPTCHA** — it costs more orders than it saves.
 
 ---
 

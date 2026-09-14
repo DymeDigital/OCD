@@ -11,9 +11,19 @@ export type SizeOption = {
   servingsMin: number;
   servingsMax: number;
   priceFrom: number; // ZAR
+  weddingEligible?: boolean; // default true; set false to exclude from wedding tier-matching (see lib/ledger.ts)
+  ledgerLabel?: string; // overrides the default "{tierLabel} cake" ledger line label when that reads wrong
 };
 
 export const sizes: SizeOption[] = [
+  // Mini cakes and bento boxes — added 2026-09 per baker request, ahead of the Product Guide PDF.
+  // Bento boxes bundle a small cake with cupcakes; not offered for weddings.
+  { id: "mini-10", tier: 1, tierLabel: "Mini", sizesCm: [10], layersNote: "2 layers", servingsMin: 1, servingsMax: 4, priceFrom: 550, weddingEligible: false },
+  { id: "mini-12", tier: 1, tierLabel: "Mini", sizesCm: [12], layersNote: "2 layers", servingsMin: 5, servingsMax: 8, priceFrom: 850, weddingEligible: false },
+  // Servings estimated from the 10cm mini (1–4) + 5 cupcakes — TODO(client): confirm exact servings for this bento.
+  { id: "bento-10", tier: 1, tierLabel: "Bento box", sizesCm: [10], layersNote: "2 layers + 5 cupcakes", servingsMin: 6, servingsMax: 9, priceFrom: 950, weddingEligible: false, ledgerLabel: "Bento box" },
+  // Cupcake count assumed to match the 10cm bento — TODO(client): confirm bundled cupcake count for this size.
+  { id: "bento-12", tier: 1, tierLabel: "Bento box", sizesCm: [12], layersNote: "3 layers + 5 cupcakes", servingsMin: 10, servingsMax: 12, priceFrom: 1000, weddingEligible: false, ledgerLabel: "Bento box" },
   // Single Tier
   { id: "1t-12", tier: 1, tierLabel: "Single Tier", sizesCm: [12], layersNote: "4 layers", servingsMin: 12, servingsMax: 16, priceFrom: 1250 },
   { id: "1t-15", tier: 1, tierLabel: "Single Tier", sizesCm: [15], layersNote: "4 layers", servingsMin: 20, servingsMax: 25, priceFrom: 1500 },
