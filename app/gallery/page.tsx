@@ -8,6 +8,7 @@ import { photos } from "@/content/data/photos";
 export const metadata: Metadata = {
   title: "Gallery",
   description: "A look through what we've made — cakes, cupcakes and wedding cakes, real orders, real occasions.",
+  alternates: { canonical: "/gallery" },
 };
 
 const validFilters: GalleryFilter[] = ["all", "cake", "cupcakes", "wedding"];

@@ -119,7 +119,7 @@ export function TermsStep({
             placeholder="Full legal name"
           />
           {signatureNameError && (
-            <p role="alert" className="mt-1.5 text-sm font-medium">
+            <p role="alert" className="mt-1.5 text-sm font-medium text-red-ink">
               {signatureNameError}
             </p>
           )}
@@ -133,7 +133,11 @@ export function TermsStep({
         </div>
 
         <label className="mt-6 flex items-start gap-3">
-          <input type="checkbox" {...agreedToTermsRegister} className="mt-1" />
+          <input
+            type="checkbox"
+            {...agreedToTermsRegister}
+            className="mt-1 h-4 w-4 shrink-0 rounded-[2px] border border-rule accent-ink"
+          />
           <span>
             I&apos;ve read and agree to the terms above.
             <span className="text-red-ink" aria-hidden>
@@ -143,7 +147,7 @@ export function TermsStep({
           </span>
         </label>
         {agreedError && (
-          <p role="alert" className="mt-1.5 pl-7 text-sm font-medium">
+          <p role="alert" className="mt-1.5 pl-7 text-sm font-medium text-red-ink">
             {agreedError}
           </p>
         )}

@@ -200,9 +200,17 @@ export function buildOrderEmail(
 
   // Deep-links to a WhatsApp chat with the customer's own number (distinct from lib/whatsapp.ts,
   // which sends the bakery's own order-notification template). No ?text= prefill — this is the
-  // baker opening a chat cold, in her own voice; omitted entirely when the number can't be
-  // confidently normalized, so it never links to a broken or wrong chat.
-  const customerWaNumber = normalizeSAWhatsAppNumber(order.data.contactNumber);
+  // baker opening a chat cold, in her own voice. lib/schemas.ts's contactNumber validation now
+  // requires a normalizable number before an order can even be submitted, so this should always
+  // resolve for new orders — the raw-digits fallback below is only for orders stored before that
+  // validation existed. The Contact row above shows the raw number regardless, so a fallback link
+  // that happens to be off is still safer to offer than none at all.
+  const customerWaNumber =
+    normalizeSAWhatsAppNumber(order.data.contactNumber) ??
+    (() => {
+      const digits = order.data.contactNumber.replace(/\D/g, "");
+      return digits.length >= 9 ? digits : null;
+    })();
   const customerFirstName = name.split(/\s+/)[0];
   const customerWaButton = customerWaNumber
     ? `<div style="margin:8px 0 20px">

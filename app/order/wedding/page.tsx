@@ -5,6 +5,7 @@ import { WeddingForm } from "@/components/order/wedding-form";
 export const metadata: Metadata = {
   title: "Start your wedding order",
   description: "Tell us about your wedding cake — venue, date, tiers, and design. We'll come back to you within 24 hours.",
+  alternates: { canonical: "/order/wedding" },
 };
 
 export default function WeddingOrderPage() {

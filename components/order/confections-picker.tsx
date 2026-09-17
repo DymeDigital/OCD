@@ -34,7 +34,7 @@ export function ConfectionsPicker({ form }: { form: UseFormReturn<OrderFormValue
                   type="checkbox"
                   checked={selected}
                   onChange={() => toggle(c.id)}
-                  className="mt-1"
+                  className="mt-1 h-4 w-4 shrink-0 rounded-[2px] border border-rule accent-ink"
                 />
                 <span className="flex-1">
                   <span className="flex items-baseline justify-between gap-4">

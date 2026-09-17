@@ -17,4 +17,8 @@ export const socialLinks = {
     "https://www.google.com/maps/place/(OCD)+Obsessive+Cupcake+Disorder/@-29.880203,30.8950115,17z/data=!3m1!4b1!4m6!3m5!1s0x1ef7ab6d965fa6f1:0xea838f480beed8d9!8m2!3d-29.880203!4d30.8975864!16s%2Fg%2F11h3bjqcfk",
   googleRating: 4.9,
   googleReviewCount: 213,
+  // The place marker's own lat/lng from the URL above (the "!3d...!4d..." pair, not the "@..."
+  // viewport-center pair, which is a slightly different point) — used for the Bakery schema's geo.
+  geoLat: -29.880203,
+  geoLng: 30.8975864,
 };

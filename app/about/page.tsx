@@ -9,7 +9,8 @@ import { aboutPhotos } from "@/content/data/photos";
 
 export const metadata: Metadata = {
   title: "About",
-  description: "Who's behind OCD, and how we work.",
+  description: "Who's behind OCD, Durban's Obsessive Cupcake Disorder, and how we work.",
+  alternates: { canonical: "/about" },
 };
 
 export default function AboutPage() {

@@ -117,7 +117,25 @@ export function OrderForm() {
 
   async function goNext() {
     const fields = stepFields[step];
-    const valid = fields.length === 0 ? true : await form.trigger(fields as never[]);
+    let valid = fields.length === 0 ? true : await form.trigger(fields as never[]);
+
+    // guestCount/cupcakeDozens are schema-optional (each only applies to some productType
+    // branches), so zodResolver's per-field trigger above can't express "required for this
+    // branch" — a schema-level cross-field refine can't either: Zod only runs a ZodObject's
+    // .refine()/.superRefine() chain once every other field type-checks, and at this step in the
+    // wizard fullName/contactNumber/etc. are still empty, so it would never fire here. Checked
+    // directly instead.
+    if (step === 3) {
+      if ((values.productType === "cake" || values.productType === "both") && !values.guestCount) {
+        form.setError("guestCount", { type: "manual", message: "Let us know how many guests you're expecting." });
+        valid = false;
+      }
+      if ((values.productType === "cupcakes" || values.productType === "both") && !values.cupcakeDozens) {
+        form.setError("cupcakeDozens", { type: "manual", message: "Let us know how many dozen you'd like." });
+        valid = false;
+      }
+    }
+
     if (valid) setStep((s) => Math.min(s + 1, steps.length - 1));
   }
 
@@ -234,7 +252,9 @@ export function OrderForm() {
                   hint="Tell us the guest count — we'll match you to a size."
                   type="number"
                   min={1}
-                  register={form.register("guestCount", { valueAsNumber: true })}
+                  register={form.register("guestCount", {
+                    setValueAs: (v) => (v === "" || v === null ? undefined : Number(v)),
+                  })}
                   error={form.formState.errors.guestCount?.message}
                 />
                 {values.guestCount && matchedSizes.length === 1 && (
@@ -277,7 +297,9 @@ export function OrderForm() {
                 hint={`Gourmet cupcakes, from R450 / dozen.`}
                 type="number"
                 min={1}
-                register={form.register("cupcakeDozens", { valueAsNumber: true })}
+                register={form.register("cupcakeDozens", {
+                  setValueAs: (v) => (v === "" || v === null ? undefined : Number(v)),
+                })}
                 error={form.formState.errors.cupcakeDozens?.message}
               />
             )}

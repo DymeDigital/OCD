@@ -188,7 +188,9 @@ export function WeddingForm() {
               required
               type="number"
               min={1}
-              register={form.register("guestCount", { valueAsNumber: true })}
+              register={form.register("guestCount", {
+                setValueAs: (v) => (v === "" || v === null ? undefined : Number(v)),
+              })}
               error={form.formState.errors.guestCount?.message}
             />
             <SelectField label="Number of tiers" required register={form.register("tierCount", { valueAsNumber: true })}>
@@ -252,7 +254,11 @@ export function WeddingForm() {
           <div className="space-y-6">
             <TextAreaField label="Cake table setup (optional)" hint="Stands, florals, signage — anything you already have planned." register={form.register("cakeTableSetup")} />
             <label className="flex items-center gap-3">
-              <input type="checkbox" {...form.register("tastingWanted")} />
+              <input
+                type="checkbox"
+                {...form.register("tastingWanted")}
+                className="h-4 w-4 shrink-0 rounded-[2px] border border-rule accent-ink"
+              />
               <span>I&apos;d like a tasting before the big day</span>
             </label>
           </div>

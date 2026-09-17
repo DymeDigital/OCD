@@ -2,6 +2,8 @@
 // lightly tightened for the web (question headers, paragraph breaks) but no numbers or facts
 // changed. This supersedes the shorter, summarised FAQ that used to live inline in app/faq/page.tsx.
 
+import { standardTerms } from "@/content/data/terms";
+
 export type FaqItem = {
   q: string;
   paragraphs?: string[];
@@ -30,7 +32,7 @@ export const faqCategories: FaqCategory[] = [
         q: "How far in advance should I order?",
         paragraphs: [
           "We recommend placing your order as early as possible, particularly for bespoke cakes and weddings.",
-          "Our standard recommended lead time is 14 days, although earlier is always better for more detailed designs and larger celebrations.",
+          `Our standard recommended lead time is ${standardTerms.minLeadTimeDays} days, although earlier is always better for more detailed designs and larger celebrations.`,
         ],
       },
       {

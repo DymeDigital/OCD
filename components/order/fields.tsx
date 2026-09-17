@@ -9,7 +9,7 @@ import type { UseFormRegisterReturn } from "react-hook-form";
 function ErrorText({ id, children }: { id: string; children?: string }) {
   if (!children) return null;
   return (
-    <p id={id} role="alert" className="mt-1.5 text-sm font-medium">
+    <p id={id} role="alert" className="mt-1.5 text-sm font-medium text-red-ink">
       {children}
     </p>
   );
@@ -192,7 +192,12 @@ export function CheckboxCardGroup({
             key={opt.value}
             className="flex cursor-pointer items-start gap-3 rounded-[4px] border border-rule p-4 has-[:checked]:border-ink has-[:checked]:bg-icing"
           >
-            <input type="checkbox" value={opt.value} {...register} className="mt-1" />
+            <input
+              type="checkbox"
+              value={opt.value}
+              {...register}
+              className="mt-1 h-4 w-4 shrink-0 rounded-[2px] border border-rule accent-ink"
+            />
             <span>
               <span className="block font-medium">{opt.label}</span>
               {opt.description && <span className="mt-1 block text-sm text-ink-soft">{opt.description}</span>}

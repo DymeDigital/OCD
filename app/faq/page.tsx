@@ -9,11 +9,33 @@ export const metadata: Metadata = {
   title: "FAQ",
   description:
     "The real terms, plainly stated — ordering, weddings, cupcakes, dietary requirements, delivery, cake care and payments.",
+  alternates: { canonical: "/faq" },
+};
+
+// Same real Q&A already on the page, expressed as FAQPage schema — a direct lever for both rich
+// snippets and AI-answer-engine citation, since it's the exact answer format those engines prefer.
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqCategories.flatMap((cat) =>
+    cat.items.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: [...(item.paragraphs ?? []), ...(item.list ?? [])].join(" "),
+      },
+    }))
+  ),
 };
 
 export default function FaqPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
       <Reveal>
         <SectionA eyebrow="FAQ">
           <h1 className="max-w-2xl font-display text-2xl font-medium">

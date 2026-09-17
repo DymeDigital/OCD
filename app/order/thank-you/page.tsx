@@ -5,6 +5,7 @@ import { ButtonLink } from "@/components/button";
 export const metadata: Metadata = {
   title: "Order received",
   description: "We've got your order — here's what happens next.",
+  alternates: { canonical: "/order/thank-you" },
 };
 
 export default async function ThankYouPage({

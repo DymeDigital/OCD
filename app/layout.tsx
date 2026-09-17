@@ -3,10 +3,15 @@ import { fontVariables } from "@/lib/fonts";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { SocialRail } from "@/components/social-rail";
+import { socialLinks } from "@/content/data/socialLinks";
+import { reviews } from "@/content/data/reviews";
+import { sizes } from "@/content/data/sizes";
+import { formatZAR } from "@/lib/pricing";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ocdcakes.co.za"),
+  metadataBase: new URL("https://obsessivecupcakedisorder.co.za"),
+  alternates: { canonical: "/" },
   title: {
     default: "Obsessive Cupcake Disorder — Bespoke cakes, cupcakes & confections",
     template: "%s — OCD",
@@ -18,8 +23,29 @@ export const metadata: Metadata = {
     description: "Bespoke cakes, cupcakes and signature confections, made to order in Durban.",
     locale: "en_ZA",
     type: "website",
+    images: [
+      {
+        // JPEG, not the site's usual WebP — several link-preview crawlers (WhatsApp, iMessage,
+        // older Facebook/Slack scrapers) don't reliably fetch WebP for og:image, which was why
+        // shared links showed no preview image at all. Center-cropped to the standard 1200x630
+        // (1.91:1) landscape ratio from the same real cupcake flatlay used elsewhere on the site.
+        url: "/images/og-cupcakes.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Overhead flatlay of pink and cream rosette-piped OCD cupcakes",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Obsessive Cupcake Disorder",
+    description: "Bespoke cakes, cupcakes and signature confections, made to order in Durban.",
+    images: ["/images/og-cupcakes.jpg"],
   },
 };
+
+const sizePrices = sizes.map((s) => s.priceFrom);
+const priceRange = `R${formatZAR(Math.min(...sizePrices))} - R${formatZAR(Math.max(...sizePrices))}`;
 
 const bakerySchema = {
   "@context": "https://schema.org",
@@ -27,6 +53,7 @@ const bakerySchema = {
   name: "Obsessive Cupcake Disorder",
   alternateName: "OCD",
   slogan: "It will have you in a frenzy.",
+  image: "https://obsessivecupcakedisorder.co.za/images/og-cupcakes.jpg",
   areaServed: "Durban, South Africa",
   address: {
     "@type": "PostalAddress",
@@ -34,6 +61,23 @@ const bakerySchema = {
     addressRegion: "KwaZulu-Natal",
     addressCountry: "ZA",
   },
+  geo: {
+    "@type": "GeoCoordinates",
+    latitude: socialLinks.geoLat,
+    longitude: socialLinks.geoLng,
+  },
+  priceRange,
+  sameAs: [socialLinks.instagram, socialLinks.facebook, socialLinks.tiktok, socialLinks.googleReviewsUrl],
+  aggregateRating: {
+    "@type": "AggregateRating",
+    ratingValue: socialLinks.googleRating,
+    reviewCount: socialLinks.googleReviewCount,
+  },
+  review: reviews.map((r) => ({
+    "@type": "Review",
+    author: { "@type": "Person", name: r.name },
+    reviewBody: r.quote,
+  })),
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

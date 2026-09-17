@@ -166,6 +166,17 @@ export async function POST(request: Request) {
   }
 
   const { env } = await getCloudflareContext({ async: true });
+
+  // Cheap, request-independent config checks — logged even on an order with no reference photos
+  // and no email failure, so a misconfigured deploy shows up in `wrangler tail` on the very first
+  // order rather than staying dormant until a customer happens to attach a photo.
+  if (!env.ORDER_PHOTOS_PUBLIC_URL || env.ORDER_PHOTOS_PUBLIC_URL.includes("REPLACE-ME")) {
+    console.error("[submit-order] misconfigured: ORDER_PHOTOS_PUBLIC_URL is unset or still the example placeholder");
+  }
+  if (!env.RESEND_API_KEY || !env.ORDER_EMAIL_TO) {
+    console.error("[submit-order] misconfigured: RESEND_API_KEY or ORDER_EMAIL_TO is unset — order emails will fail");
+  }
+
   const base = (env.SITE_URL || new URL(request.url).origin).replace(/\/$/, "");
   const orderUrl = `${base}/o/${token}`;
 

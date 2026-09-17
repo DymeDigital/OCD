@@ -59,7 +59,13 @@ export async function getOrder(token: string): Promise<StoredOrder | null> {
 export async function savePhoto(token: string, file: File): Promise<ReferenceImage> {
   const { env } = await getCloudflareContext({ async: true });
   const publicBase = env.ORDER_PHOTOS_PUBLIC_URL;
-  if (!publicBase) throw new Error("ORDER_PHOTOS_PUBLIC_URL is not configured");
+  // The unset case throws below either way, but the .dev.vars.example placeholder is a non-empty
+  // string — pasted verbatim into a production secret by mistake, it would otherwise build a URL
+  // that looks fine and only fails once someone clicks the broken image link. Caught explicitly so
+  // it fails the same way "unset" does: loudly, at upload time.
+  if (!publicBase || publicBase.includes("REPLACE-ME")) {
+    throw new Error("ORDER_PHOTOS_PUBLIC_URL is not configured (still unset or the example placeholder)");
+  }
 
   const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
   const key = `${token}/${crypto.randomUUID()}.${ext}`;

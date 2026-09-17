@@ -8,7 +8,9 @@ import { weddingTerms } from "@/content/data/terms";
 
 export const metadata: Metadata = {
   title: "Weddings",
-  description: "Wedding cakes, designed around your day — with the lead time and care a wedding cake needs.",
+  description:
+    "Wedding cakes in Durban and KwaZulu-Natal, designed around your day — with the lead time and care a wedding cake needs.",
+  alternates: { canonical: "/weddings" },
 };
 
 const weddingPhotos = photos.filter((p) => p.category === "wedding" && p.hero).slice(0, 6);

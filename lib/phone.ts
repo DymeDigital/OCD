@@ -11,6 +11,9 @@ export function normalizeSAWhatsAppNumber(raw: string): string | null {
   // Local, 0-prefixed 10-digit mobile — "082 234 5678" -> "27822345678".
   if (digits.length === 10 && /^0[678]/.test(digits)) return `27${digits.slice(1)}`;
 
+  // Bare mobile subscriber number, no leading 0 and no country code — "82 234 5678" -> "27822345678".
+  if (digits.length === 9 && /^[678]/.test(digits)) return `27${digits}`;
+
   // Too short/long, landline-shaped (01x-05x), non-SA, or ambiguous — don't guess.
   return null;
 }

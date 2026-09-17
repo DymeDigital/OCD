@@ -7,7 +7,8 @@ import { socialLinks } from "@/content/data/socialLinks";
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "Get in touch, or start your order directly.",
+  description: "Get in touch with OCD in Durban, or start your order directly.",
+  alternates: { canonical: "/contact" },
 };
 
 export default function ContactPage() {
@@ -32,6 +33,10 @@ export default function ContactPage() {
           <div className="flex justify-between py-3">
             <dt className="text-ink-soft">Based in</dt>
             <dd>Durban, South Africa</dd>
+          </div>
+          <div className="flex justify-between py-3">
+            <dt className="text-ink-soft">Hours</dt>
+            <dd>Orders by WhatsApp or email, any time — no walk-ins</dd>
           </div>
           <div className="flex justify-between py-3">
             <dt className="text-ink-soft">WhatsApp</dt>

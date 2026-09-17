@@ -6,6 +6,7 @@ import { OrderForm } from "@/components/order/order-form";
 export const metadata: Metadata = {
   title: "Start your order",
   description: "Tell us about your cake — flavour, size, design, and delivery. We'll come back to you within 24 hours.",
+  alternates: { canonical: "/order" },
 };
 
 export default function OrderPage() {

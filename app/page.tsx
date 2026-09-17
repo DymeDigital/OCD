@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Hero } from "@/components/hero";
 import { SectionA } from "@/components/register-a";
 import { Reveal } from "@/components/reveal";
@@ -8,6 +9,12 @@ import { flavours } from "@/content/data/flavours";
 import { photos } from "@/content/data/photos";
 import { formatPriceFrom, PRICE_CONFIRM_NOTE } from "@/lib/pricing";
 import { sizes } from "@/content/data/sizes";
+
+// Title/description are inherited from the root layout's default — already locality/keyword-rich
+// (mentions Durban, South Africa and every product line). Only the canonical needs setting here.
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 const whyOcd = [
   {
@@ -68,7 +75,7 @@ export default function HomePage() {
 
       <Reveal>
         <SectionA eyebrow="What we make" className="text-center md:text-left">
-          <h2 className="mx-auto max-w-2xl font-display text-2xl font-medium md:mx-0">
+          <h2 className="mx-auto max-w-2xl font-display text-lg font-medium md:mx-0 md:text-2xl">
             Celebration cakes, wedding cakes, cupcakes, and a full line of signature confections.
           </h2>
           <div className="mt-12 grid grid-cols-2 gap-4 md:grid-cols-3">

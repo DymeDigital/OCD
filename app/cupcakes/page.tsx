@@ -10,7 +10,9 @@ import { formatPriceFrom, PRICE_CONFIRM_NOTE } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Cupcakes & Confections",
-  description: "Gourmet cupcakes with Swiss meringue buttercream, plus the full Signature Confections line.",
+  description:
+    "Gourmet cupcakes with Swiss meringue buttercream, made to order in Durban, plus the full Signature Confections line.",
+  alternates: { canonical: "/cupcakes" },
 };
 
 const cupcakeFlavours = flavours.filter((f) => f.category === "cupcake" || f.category === "both");

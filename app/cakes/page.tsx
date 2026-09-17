@@ -10,7 +10,9 @@ import { formatRange, PRICE_CONFIRM_NOTE } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Cakes",
-  description: "Fourteen flavours, six tiers of scale, and pricing that starts from a real number.",
+  description:
+    "Bespoke celebration cakes in Durban, KwaZulu-Natal — fourteen flavours, six tiers of scale, and pricing that starts from a real number.",
+  alternates: { canonical: "/cakes" },
 };
 
 const cakeFlavours = flavours.filter((f) => f.category === "cake" || f.category === "both");
