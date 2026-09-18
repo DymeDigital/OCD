@@ -99,12 +99,14 @@ export function TextAreaField({
 
 export function SelectField({
   label,
+  hint,
   error,
   required,
   register,
   children,
 }: {
   label: string;
+  hint?: string;
   error?: string;
   required?: boolean;
   register: UseFormRegisterReturn;
@@ -122,6 +124,7 @@ export function SelectField({
           </span>
         )}
       </span>
+      {hint && <span className="mt-1 block text-sm text-ink-soft">{hint}</span>}
       <select
         {...register}
         aria-invalid={!!error}
@@ -141,24 +144,27 @@ export function RadioCardGroup({
   options,
   register,
   error,
+  hint,
 }: {
   legend: string;
   name: string;
-  options: { value: string; label: string; description?: string }[];
+  options: { value: string; label: string; description?: string; disabled?: boolean }[];
   register: UseFormRegisterReturn;
   error?: string;
+  hint?: string;
 }) {
   const errorId = `${name}-error`;
   return (
     <fieldset>
       <legend className="label text-ink-soft">{legend}</legend>
+      {hint && <span className="mt-1 block text-sm text-ink-soft">{hint}</span>}
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {options.map((opt) => (
           <label
             key={opt.value}
-            className="cursor-pointer rounded-[4px] border border-rule p-4 has-[:checked]:border-ink has-[:checked]:bg-icing"
+            className="cursor-pointer rounded-[4px] border border-rule p-4 has-[:checked]:border-ink has-[:checked]:bg-icing has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-40"
           >
-            <input type="radio" value={opt.value} {...register} className="sr-only" />
+            <input type="radio" value={opt.value} disabled={opt.disabled} {...register} className="sr-only" />
             <span className="block font-medium">{opt.label}</span>
             {opt.description && <span className="mt-1 block text-sm text-ink-soft">{opt.description}</span>}
           </label>

@@ -8,6 +8,9 @@ export type Flavour = {
   description: string;
   category: "cake" | "cupcake" | "both";
   mostRequested: boolean;
+  // Customer can override the default filling above — see content/data/fillings.ts.
+  // Client-confirmed 2026-09-18: only Belgian Chocolate and Vanilla Bean offer this.
+  hasFillingChoice?: boolean;
 };
 
 // Client-confirmed 2026-08-16: eggless is only available on the Vanilla Bean sponge. The order
@@ -23,6 +26,7 @@ export const flavours: Flavour[] = [
       "A rich, moist chocolate sponge made with premium Belgian cocoa, layered generously with silky smooth chocolate ganache. Each bite melts in your mouth, offering a deep, decadent chocolate flavour and a luscious, fudge-like finish.",
     category: "both",
     mostRequested: true,
+    hasFillingChoice: true,
   },
   {
     id: "vanilla-bean-caramel",
@@ -32,6 +36,7 @@ export const flavours: Flavour[] = [
       "A soft, butter-based delight infused with real vanilla bean for a rich, fragrant flavour. Each layer is filled with a smooth, golden caramel ganache that adds the perfect touch of sweetness.",
     category: "both",
     mostRequested: true,
+    hasFillingChoice: true,
   },
   {
     id: "lemon-blueberry",

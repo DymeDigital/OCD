@@ -1,6 +1,7 @@
 import { sizes, sizesForServings } from "@/content/data/sizes";
 import { confections, cupcakeBase } from "@/content/data/confections";
 import { flavours } from "@/content/data/flavours";
+import { fillingName } from "@/content/data/fillings";
 import type { OrderFormValues } from "@/lib/schemas";
 import type { WeddingOrderFormValues } from "@/lib/schemas";
 import { formatRange, formatPriceFrom } from "@/lib/pricing";
@@ -106,6 +107,12 @@ export function computeWeddingLedger(values: Partial<WeddingOrderFormValues>): L
 
 export function flavourName(id: string): string {
   return flavours.find((f) => f.id === id)?.name ?? id;
+}
+
+export function flavourLabel(id: string, flavourFillings?: Record<string, string>): string {
+  const name = flavourName(id);
+  const overrideLabel = fillingName(flavourFillings?.[id]);
+  return overrideLabel ? `${name} (${overrideLabel})` : name;
 }
 
 export { formatRange, formatPriceFrom };

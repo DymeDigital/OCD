@@ -4,9 +4,10 @@ import {
   orderCustomerName,
   orderOccasionLine,
   orderEstimateLine,
+  collectionWindowLabel,
   formatDateZA,
 } from "@/lib/order-summary";
-import { flavourName } from "@/lib/ledger";
+import { flavourLabel } from "@/lib/ledger";
 import { designTiers } from "@/content/data/designTiers";
 import { normalizeSAWhatsAppNumber } from "@/lib/phone";
 import type { OrderFormValues, WeddingOrderFormValues } from "@/lib/schemas";
@@ -86,10 +87,11 @@ function standardDetailRows(data: OrderFormValues): string {
     fieldRow("Making", data.productType),
     fieldRow("Guest count", data.guestCount),
     fieldRow("Cake shape", str(data.cakeShape)),
-    fieldRow("Cake flavour(s)", data.cakeFlavourIds?.map(flavourName).join(", ")),
+    fieldRow("Cake flavour", data.cakeFlavourId && flavourLabel(data.cakeFlavourId, data.cakeFlavourFillings)),
     fieldRow("Cupcake dozens", data.cupcakeDozens),
-    fieldRow("Cupcake flavour(s)", data.cupcakeFlavourIds?.map(flavourName).join(", ")),
-    fieldRow("Dietary", data.dietaryOptions?.join(", ")),
+    fieldRow("Cupcake flavour", data.cupcakeFlavourId && flavourLabel(data.cupcakeFlavourId, data.cupcakeFlavourFillings)),
+    fieldRow("Cake dietary", data.cakeDietaryOptions?.join(", ")),
+    fieldRow("Cupcake dietary", data.cupcakeDietaryOptions?.join(", ")),
     fieldRow("Design tier", designTiers.find((t) => t.id === data.designTierId)?.label),
     fieldRow("Add-ons", data.addOns),
   ].join("");
@@ -109,7 +111,7 @@ function weddingDetailRows(data: WeddingOrderFormValues): string {
         ? `${data.tierCount}${data.fauxTierCount ? ` (${data.fauxTierCount} faux)` : ""}`
         : undefined
     ),
-    fieldRow("Flavour(s)", data.perTierFlavourIds?.map(flavourName).join(", ")),
+    fieldRow("Flavour(s)", data.perTierFlavourIds?.map((id) => flavourLabel(id, data.flavourFillings)).join(", ")),
     fieldRow("Dietary", data.dietaryOptions?.join(", ")),
     fieldRow("Cake table setup", data.cakeTableSetup),
     fieldRow("Tasting wanted", data.tastingWanted ? "Yes" : "No"),
@@ -194,21 +196,26 @@ export function buildOrderEmail(
   const text = buildOrderPlainText(order, opts.orderUrl);
 
   const foundUs = str(order.data.foundUs);
+  const whatsappNumber = str(order.data.whatsappNumber);
   const contact = `${order.data.contactNumber}${
-    order.data.email ? ` &nbsp;/&nbsp; ${esc(order.data.email)}` : ""
-  }${foundUs ? ` &nbsp;·&nbsp; via ${esc(foundUs)}` : ""}`;
+    whatsappNumber ? ` &nbsp;(WhatsApp: ${esc(whatsappNumber)})` : ""
+  }${order.data.email ? ` &nbsp;/&nbsp; ${esc(order.data.email)}` : ""}${
+    foundUs ? ` &nbsp;·&nbsp; via ${esc(foundUs)}` : ""
+  }`;
 
   // Deep-links to a WhatsApp chat with the customer's own number (distinct from lib/whatsapp.ts,
   // which sends the bakery's own order-notification template). No ?text= prefill — this is the
-  // baker opening a chat cold, in her own voice. lib/schemas.ts's contactNumber validation now
-  // requires a normalizable number before an order can even be submitted, so this should always
-  // resolve for new orders — the raw-digits fallback below is only for orders stored before that
-  // validation existed. The Contact row above shows the raw number regardless, so a fallback link
-  // that happens to be off is still safer to offer than none at all.
+  // baker opening a chat cold, in her own voice. Prefers whatsappNumber when the customer gave one
+  // (it's only collected because it differs from contactNumber). lib/schemas.ts's contactNumber
+  // validation now requires a normalizable number before an order can even be submitted, so this
+  // should always resolve for new orders — the raw-digits fallback below is only for orders stored
+  // before that validation existed. The Contact row above shows the raw number regardless, so a
+  // fallback link that happens to be off is still safer to offer than none at all.
+  const preferredWaSource = whatsappNumber || order.data.contactNumber;
   const customerWaNumber =
-    normalizeSAWhatsAppNumber(order.data.contactNumber) ??
+    normalizeSAWhatsAppNumber(preferredWaSource) ??
     (() => {
-      const digits = order.data.contactNumber.replace(/\D/g, "");
+      const digits = preferredWaSource.replace(/\D/g, "");
       return digits.length >= 9 ? digits : null;
     })();
   const customerFirstName = name.split(/\s+/)[0];
@@ -235,10 +242,15 @@ export function buildOrderEmail(
       : `<tr><td style="padding:4px 0;color:#6B6B6B">Details in the full order.</td></tr>`;
 
   const deliveryTitle = order.data.deliveryMode === "delivery" ? "Delivery" : "Collection";
-  const deliveryRows = fieldRow(
-    "Address",
-    order.data.deliveryMode === "delivery" ? order.data.address : "Collection from OCD"
-  );
+  const deliveryRows = [
+    fieldRow(
+      "Address",
+      order.data.deliveryMode === "delivery" ? order.data.address : "Collection from OCD"
+    ),
+    order.data.deliveryMode === "collection"
+      ? fieldRow("Collection window", collectionWindowLabel(order.data.collectionWindow))
+      : "",
+  ].join("");
 
   const { html: photosHtml, attachments } = buildPhotos(opts.photos, order.referenceImages);
 

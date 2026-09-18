@@ -16,8 +16,10 @@ import {
 import { computeOrderLedger } from "@/lib/ledger";
 import { formatPriceFrom } from "@/lib/pricing";
 import { flavours, egglessFlavourIds } from "@/content/data/flavours";
+import { fillings, egglessFillings } from "@/content/data/fillings";
 import { designTiers } from "@/content/data/designTiers";
 import { sizesForServings } from "@/content/data/sizes";
+import { collectionWindows } from "@/content/data/collection-windows";
 import { LedgerPanel } from "@/components/order/ledger-panel";
 import { ConfectionsPicker } from "@/components/order/confections-picker";
 import { ImageUpload } from "@/components/order/image-upload";
@@ -28,6 +30,13 @@ import { Button } from "@/components/button";
 import { buildOrderPlainText, type OrderSummaryInput } from "@/lib/order-summary";
 
 const STORAGE_KEY = "ocd-order-draft";
+
+// A localStorage draft saved before dietaryOptions was split into cakeDietaryOptions /
+// cupcakeDietaryOptions (or any other malformed persisted value) can restore these fields as
+// something other than a clean string array — guard reads instead of assuming the shape.
+function includesEggless(opts: unknown): boolean {
+  return Array.isArray(opts) && opts.includes("eggless");
+}
 
 const steps = [
   "Occasion",
@@ -65,11 +74,14 @@ export function OrderForm() {
     occasion: undefined,
     eventDate: "",
     productType: undefined,
-    cakeFlavourIds: [],
-    cupcakeFlavourIds: [],
-    dietaryOptions: [],
+    cakeDietaryOptions: [],
+    cupcakeDietaryOptions: [],
     confections: [],
     deliveryMode: "collection",
+    address: "",
+    collectionWindow: "",
+    cakeFlavourFillings: {},
+    cupcakeFlavourFillings: {},
     agreedToTerms: false,
   } as unknown as OrderFormValues);
 
@@ -79,17 +91,54 @@ export function OrderForm() {
   const cakeFlavours = flavours.filter((f) => f.category === "cake" || f.category === "both");
   const cupcakeFlavours = flavours.filter((f) => f.category === "cupcake" || f.category === "both");
 
-  // Eggless only comes in Vanilla Bean — deselect any other flavour the moment eggless is checked.
+  // Eggless only comes in Vanilla Bean — switch the flavour to it in a branch the moment eggless is
+  // checked for that branch (cake and cupcake dietary options are independent, so eggless cupcakes
+  // doesn't force the cake branch to Vanilla Bean too, and vice versa). If nothing was selected yet,
+  // pick Vanilla Bean too — otherwise the filling picker below has no flavour to attach to.
   useEffect(() => {
-    if (!values.dietaryOptions?.includes("eggless")) return;
-    const cake = values.cakeFlavourIds ?? [];
-    const cupcake = values.cupcakeFlavourIds ?? [];
-    const filteredCake = cake.filter((id) => egglessFlavourIds.includes(id));
-    const filteredCupcake = cupcake.filter((id) => egglessFlavourIds.includes(id));
-    if (filteredCake.length !== cake.length) form.setValue("cakeFlavourIds", filteredCake, { shouldValidate: true });
-    if (filteredCupcake.length !== cupcake.length)
-      form.setValue("cupcakeFlavourIds", filteredCupcake, { shouldValidate: true });
-  }, [values.dietaryOptions, values.cakeFlavourIds, values.cupcakeFlavourIds, form]);
+    const needsCake = values.productType === "cake" || values.productType === "both";
+    const needsCupcake = values.productType === "cupcakes" || values.productType === "both";
+    const cakeEggless = includesEggless(values.cakeDietaryOptions);
+    const cupcakeEggless = includesEggless(values.cupcakeDietaryOptions);
+    if (cakeEggless && needsCake && (!values.cakeFlavourId || !egglessFlavourIds.includes(values.cakeFlavourId))) {
+      form.setValue("cakeFlavourId", egglessFlavourIds[0], { shouldValidate: true });
+    }
+    if (cupcakeEggless && needsCupcake && (!values.cupcakeFlavourId || !egglessFlavourIds.includes(values.cupcakeFlavourId))) {
+      form.setValue("cupcakeFlavourId", egglessFlavourIds[0], { shouldValidate: true });
+    }
+  }, [
+    values.cakeDietaryOptions,
+    values.cupcakeDietaryOptions,
+    values.cakeFlavourId,
+    values.cupcakeFlavourId,
+    values.productType,
+    form,
+  ]);
+
+  const cakeEggless = includesEggless(values.cakeDietaryOptions);
+  const cupcakeEggless = includesEggless(values.cupcakeDietaryOptions);
+
+  // Fillings are chosen per branch — cakeFlavourFillings / cupcakeFlavourFillings — so a "both"
+  // order can put a different filling in the cake vs. the cupcakes even when they share the same
+  // flavour (only Vanilla Bean has a filling choice, and it's also the only eggless flavour).
+  // A filling chosen from the general list may not exist in the eggless list (or vice versa) —
+  // clear it rather than leave a stale, no-longer-offered choice silently in place.
+  useEffect(() => {
+    const pickedCake = values.cakeFlavourFillings?.["vanilla-bean-caramel"];
+    if (pickedCake) {
+      const options = cakeEggless ? egglessFillings : fillings;
+      if (!options.some((o) => o.id === pickedCake)) {
+        form.setValue("cakeFlavourFillings.vanilla-bean-caramel", "", { shouldValidate: true });
+      }
+    }
+    const pickedCupcake = values.cupcakeFlavourFillings?.["vanilla-bean-caramel"];
+    if (pickedCupcake) {
+      const options = cupcakeEggless ? egglessFillings : fillings;
+      if (!options.some((o) => o.id === pickedCupcake)) {
+        form.setValue("cupcakeFlavourFillings.vanilla-bean-caramel", "", { shouldValidate: true });
+      }
+    }
+  }, [cakeEggless, cupcakeEggless, values.cakeFlavourFillings, values.cupcakeFlavourFillings, form]);
 
   // When more than one size fits the guest count (e.g. a mini cake and a bento box both do),
   // default to the cheapest so the field is always populated even if the customer never touches
@@ -109,7 +158,7 @@ export function OrderForm() {
     [],
     [],
     [],
-    ["deliveryMode", "address"],
+    ["deliveryMode", "address", "collectionWindow"],
     ["fullName", "contactNumber", "email"],
     ["signatureName", "agreedToTerms"],
     [],
@@ -309,27 +358,91 @@ export function OrderForm() {
         {step === 4 && (
           <div className="space-y-8">
             {(values.productType === "cake" || values.productType === "both") && (
-              <CheckboxCardGroup
-                legend="Cake flavour(s)"
-                options={cakeFlavours.map((f) => ({ value: f.id, label: f.name, description: f.filling }))}
-                register={form.register("cakeFlavourIds")}
-              />
+              <>
+                <RadioCardGroup
+                  legend="Cake flavour"
+                  name="cakeFlavourId"
+                  options={cakeFlavours.map((f) => ({
+                    value: f.id,
+                    label: f.name,
+                    description: f.filling,
+                    disabled: cakeEggless && !egglessFlavourIds.includes(f.id),
+                  }))}
+                  register={form.register("cakeFlavourId")}
+                  error={form.formState.errors.cakeFlavourId?.message}
+                  hint={cakeEggless ? "Only Vanilla Bean is eggless — unselect eggless to choose a different flavour." : undefined}
+                />
+                <CheckboxCardGroup
+                  legend="Cake dietary options"
+                  options={[
+                    { value: "gluten-free", label: "Gluten free" },
+                    { value: "eggless", label: "Eggless", description: "Available in Vanilla only" },
+                  ]}
+                  register={form.register("cakeDietaryOptions")}
+                />
+                {(() => {
+                  const flavour = flavours.find((f) => f.id === values.cakeFlavourId);
+                  if (!flavour?.hasFillingChoice) return null;
+                  const options = cakeEggless ? egglessFillings : fillings;
+                  return (
+                    <div className="space-y-6">
+                      <p className="label text-ink-soft">Cake filling</p>
+                      <SelectField label={`${flavour.name} filling`} register={form.register(`cakeFlavourFillings.${flavour.id}`)}>
+                        <option value="">Use the usual filling — {flavour.filling}</option>
+                        {options.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </SelectField>
+                    </div>
+                  );
+                })()}
+              </>
             )}
             {(values.productType === "cupcakes" || values.productType === "both") && (
-              <CheckboxCardGroup
-                legend="Cupcake flavour(s)"
-                options={cupcakeFlavours.map((f) => ({ value: f.id, label: f.name, description: f.filling }))}
-                register={form.register("cupcakeFlavourIds")}
-              />
+              <>
+                <RadioCardGroup
+                  legend="Cupcake flavour"
+                  name="cupcakeFlavourId"
+                  options={cupcakeFlavours.map((f) => ({
+                    value: f.id,
+                    label: f.name,
+                    description: f.filling,
+                    disabled: cupcakeEggless && !egglessFlavourIds.includes(f.id),
+                  }))}
+                  register={form.register("cupcakeFlavourId")}
+                  error={form.formState.errors.cupcakeFlavourId?.message}
+                  hint={cupcakeEggless ? "Only Vanilla Bean is eggless — unselect eggless to choose a different flavour." : undefined}
+                />
+                <CheckboxCardGroup
+                  legend="Cupcake dietary options"
+                  options={[
+                    { value: "gluten-free", label: "Gluten free" },
+                    { value: "eggless", label: "Eggless", description: "Available in Vanilla only" },
+                  ]}
+                  register={form.register("cupcakeDietaryOptions")}
+                />
+                {(() => {
+                  const flavour = flavours.find((f) => f.id === values.cupcakeFlavourId);
+                  if (!flavour?.hasFillingChoice) return null;
+                  const options = cupcakeEggless ? egglessFillings : fillings;
+                  return (
+                    <div className="space-y-6">
+                      <p className="label text-ink-soft">Cupcake filling</p>
+                      <SelectField label={`${flavour.name} filling`} register={form.register(`cupcakeFlavourFillings.${flavour.id}`)}>
+                        <option value="">Use the usual filling — {flavour.filling}</option>
+                        {options.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </SelectField>
+                    </div>
+                  );
+                })()}
+              </>
             )}
-            <CheckboxCardGroup
-              legend="Dietary options"
-              options={[
-                { value: "gluten-free", label: "Gluten free" },
-                { value: "eggless", label: "Eggless", description: "Available in Vanilla only" },
-              ]}
-              register={form.register("dietaryOptions")}
-            />
           </div>
         )}
 
@@ -370,6 +483,22 @@ export function OrderForm() {
                 error={form.formState.errors.address?.message}
               />
             )}
+            {values.deliveryMode === "collection" && (
+              <SelectField
+                label="Collection window"
+                required
+                hint="Kindly select a one-hour collection window that suits you, and we'll have your order ready for collection during this time."
+                register={form.register("collectionWindow")}
+                error={form.formState.errors.collectionWindow?.message}
+              >
+                <option value="">Select…</option>
+                {collectionWindows.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.label}
+                  </option>
+                ))}
+              </SelectField>
+            )}
           </div>
         )}
 
@@ -377,6 +506,12 @@ export function OrderForm() {
           <div className="space-y-6">
             <TextField label="Full name" required register={form.register("fullName")} error={form.formState.errors.fullName?.message} />
             <TextField label="Contact number" required register={form.register("contactNumber")} error={form.formState.errors.contactNumber?.message} />
+            <TextField
+              label="WhatsApp number (if different)"
+              hint="Only if it's different from the contact number above — we'll message you there for updates."
+              register={form.register("whatsappNumber")}
+              error={form.formState.errors.whatsappNumber?.message}
+            />
             <TextField label="Email (optional)" type="email" register={form.register("email")} error={form.formState.errors.email?.message} />
             <SelectField label="How did you find us?" register={form.register("foundUs")}>
               <option value="">Select…</option>

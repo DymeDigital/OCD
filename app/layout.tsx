@@ -26,13 +26,13 @@ export const metadata: Metadata = {
     images: [
       {
         // JPEG, not the site's usual WebP — several link-preview crawlers (WhatsApp, iMessage,
-        // older Facebook/Slack scrapers) don't reliably fetch WebP for og:image, which was why
-        // shared links showed no preview image at all. Center-cropped to the standard 1200x630
-        // (1.91:1) landscape ratio from the same real cupcake flatlay used elsewhere on the site.
-        url: "/images/og-cupcakes.jpg",
+        // older Facebook/Slack scrapers) don't reliably fetch WebP for og:image. The real OCD logo
+        // mark, centered on white with generous margin — matches the site's actual white/black,
+        // logo-forward look (§5), rather than an arbitrary product photo.
+        url: "/images/og-logo.jpg",
         width: 1200,
         height: 630,
-        alt: "Overhead flatlay of pink and cream rosette-piped OCD cupcakes",
+        alt: "The OCD (Obsessive Cupcake Disorder) logo — \"it will have you in a frenzy\"",
       },
     ],
   },
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Obsessive Cupcake Disorder",
     description: "Bespoke cakes, cupcakes and signature confections, made to order in Durban.",
-    images: ["/images/og-cupcakes.jpg"],
+    images: ["/images/og-logo.jpg"],
   },
 };
 
@@ -53,7 +53,7 @@ const bakerySchema = {
   name: "Obsessive Cupcake Disorder",
   alternateName: "OCD",
   slogan: "It will have you in a frenzy.",
-  image: "https://obsessivecupcakedisorder.co.za/images/og-cupcakes.jpg",
+  image: "https://obsessivecupcakedisorder.co.za/images/og-logo.jpg",
   areaServed: "Durban, South Africa",
   address: {
     "@type": "PostalAddress",

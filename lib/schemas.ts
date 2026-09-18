@@ -40,6 +40,15 @@ const contactFields = {
       message: "That doesn't look like a valid SA mobile number — try 082 123 4567.",
     }),
   email: z.string().trim().email("That doesn't look like a full email address.").optional().or(z.literal("")),
+  // Only needed when it differs from contactNumber — contactNumber is still what we WhatsApp by
+  // default (lib/email.ts), this just lets a customer override that when the two aren't the same.
+  whatsappNumber: z
+    .string()
+    .trim()
+    .optional()
+    .refine((v) => !v || normalizeSAWhatsAppNumber(v) !== null, {
+      message: "That doesn't look like a valid SA mobile number — try 082 123 4567.",
+    }),
   foundUs: optionalEnum(foundUsOptions),
 };
 
@@ -58,6 +67,22 @@ const signatureFields = {
 const deliveryFields = {
   deliveryMode: z.enum(deliveryModes),
   address: z.string().trim().optional(),
+  collectionWindow: z.string().optional(),
+};
+
+// Keyed by flavour id — only meaningful for flavours with hasFillingChoice (flavours.ts). Absent
+// or missing means "use the flavour's usual filling".
+const fillingFields = {
+  flavourFillings: z.record(z.string(), z.string()).optional(),
+};
+
+// The standard order form splits fillings per branch (not the single flavourFillings above) so a
+// "both" order can pick a different filling for the cake vs. the cupcakes even when they share the
+// same flavour, e.g. Vanilla Bean cake with caramel filling alongside Vanilla Bean cupcakes with
+// cream cheese filling.
+const branchedFillingFields = {
+  cakeFlavourFillings: z.record(z.string(), z.string()).optional(),
+  cupcakeFlavourFillings: z.record(z.string(), z.string()).optional(),
 };
 
 // `confectionId` (not `id`) deliberately — react-hook-form's useFieldArray injects its own
@@ -81,13 +106,16 @@ const orderObjectSchema = z.object({
   // box both fit) — lets the customer pick between them instead of always getting the cheapest.
   sizeId: z.string().optional(),
   cakeShape: optionalEnum(cakeShapes),
-  cakeFlavourIds: z.array(z.string()).default([]),
+  cakeFlavourId: z.string().optional(),
 
   // Cupcake branch
   cupcakeDozens: z.number().int().min(1, "Let us know how many dozen you'd like.").optional(),
-  cupcakeFlavourIds: z.array(z.string()).default([]),
+  cupcakeFlavourId: z.string().optional(),
 
-  dietaryOptions: z.array(z.enum(dietaryOptions)).default([]),
+  // Split per branch (not one shared field) so eggless can be picked for just the cake or just
+  // the cupcakes on a "both" order without forcing the other branch to Vanilla Bean too.
+  cakeDietaryOptions: z.array(z.enum(dietaryOptions)).default([]),
+  cupcakeDietaryOptions: z.array(z.enum(dietaryOptions)).default([]),
 
   // Design
   designTierId: optionalEnum(["simple", "detailed", "showpiece"] as const),
@@ -100,12 +128,17 @@ const orderObjectSchema = z.object({
   ...deliveryFields,
   ...contactFields,
   ...signatureFields,
+  ...branchedFillingFields,
 });
 
 export const orderSchema = orderObjectSchema
   .refine((v) => v.deliveryMode === "collection" || !!(v.address && v.address.length > 4), {
     message: "We need a delivery address to quote delivery.",
     path: ["address"],
+  })
+  .refine((v) => v.deliveryMode === "delivery" || !!v.collectionWindow, {
+    message: "Please pick a collection time window.",
+    path: ["collectionWindow"],
   })
   .refine(
     (v) => {
@@ -130,13 +163,22 @@ export const orderSchema = orderObjectSchema
   })
   .refine(
     (v) => {
-      if (!v.dietaryOptions.includes("eggless")) return true;
-      const picked = [...v.cakeFlavourIds, ...v.cupcakeFlavourIds];
-      return picked.every((id) => egglessFlavourIds.includes(id));
+      if (!v.cakeDietaryOptions.includes("eggless") || !v.cakeFlavourId) return true;
+      return egglessFlavourIds.includes(v.cakeFlavourId);
     },
     {
-      message: "Eggless is only available in Vanilla Bean — remove the other flavours, or unselect eggless.",
-      path: ["dietaryOptions"],
+      message: "Eggless is only available in Vanilla Bean — change the cake flavour, or unselect eggless.",
+      path: ["cakeDietaryOptions"],
+    }
+  )
+  .refine(
+    (v) => {
+      if (!v.cupcakeDietaryOptions.includes("eggless") || !v.cupcakeFlavourId) return true;
+      return egglessFlavourIds.includes(v.cupcakeFlavourId);
+    },
+    {
+      message: "Eggless is only available in Vanilla Bean — change the cupcake flavour, or unselect eggless.",
+      path: ["cupcakeDietaryOptions"],
     }
   );
 // z.input (not z.infer/output) — react-hook-form types `useForm<T>` against the raw, pre-default
@@ -167,12 +209,17 @@ const weddingObjectSchema = z.object({
   ...deliveryFields,
   ...contactFields,
   ...signatureFields,
+  ...fillingFields,
 });
 
 export const weddingOrderSchema = weddingObjectSchema
   .refine((v) => v.deliveryMode === "collection" || !!(v.address && v.address.length > 4), {
     message: "We need a venue address to quote delivery.",
     path: ["address"],
+  })
+  .refine((v) => v.deliveryMode === "delivery" || !!v.collectionWindow, {
+    message: "Please pick a collection time window.",
+    path: ["collectionWindow"],
   })
   .refine((v) => v.fauxTierCount < v.tierCount, {
     message: "At least one tier needs to be real cake.",

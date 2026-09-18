@@ -1,6 +1,7 @@
 import type { Ledger } from "@/lib/ledger";
 import type { OrderFormValues, WeddingOrderFormValues } from "@/lib/schemas";
 import { formatPriceFrom } from "@/lib/pricing";
+import { collectionWindows } from "@/content/data/collection-windows";
 
 // Deliberately independent of lib/order-store.ts (which touches Cloudflare bindings) — this
 // module is imported from client components (components/order/submit-fallback.tsx) as well as
@@ -22,6 +23,10 @@ export function formatDateZA(iso: string): string {
 
 export function orderCustomerName(order: OrderSummaryInput): string {
   return order.data.fullName;
+}
+
+export function collectionWindowLabel(id: string | undefined): string | undefined {
+  return collectionWindows.find((w) => w.id === id)?.label;
 }
 
 export function orderOccasionLine(order: OrderSummaryInput): string {
@@ -52,10 +57,16 @@ export function buildOrderPlainText(order: OrderSummaryInput, orderUrl: string |
   lines.push("");
   lines.push(`Customer: ${orderCustomerName(order)}`);
   lines.push(
-    `Contact: ${order.data.contactNumber}${order.data.email ? ` / ${order.data.email}` : ""}`
+    `Contact: ${order.data.contactNumber}${
+      order.data.whatsappNumber ? ` (WhatsApp: ${order.data.whatsappNumber})` : ""
+    }${order.data.email ? ` / ${order.data.email}` : ""}`
   );
   lines.push("");
   lines.push(orderOccasionLine(order));
+  if (order.data.deliveryMode === "collection" && order.data.collectionWindow) {
+    const slotLabel = collectionWindowLabel(order.data.collectionWindow);
+    if (slotLabel) lines.push(`Collection window: ${slotLabel}`);
+  }
   lines.push("");
   if (order.ledger.lines.length > 0) {
     for (const line of order.ledger.lines) {

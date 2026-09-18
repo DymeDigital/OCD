@@ -6,8 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { usePersistedForm, clearPersistedForm } from "@/lib/use-persisted-form";
 import { weddingOrderSchema, deliveryModes, foundUsOptions, type WeddingOrderFormValues } from "@/lib/schemas";
 import { computeWeddingLedger } from "@/lib/ledger";
-import { flavours, egglessFlavourIds } from "@/content/data/flavours";
+import { flavours, egglessFlavourIds, type Flavour } from "@/content/data/flavours";
+import { fillings, egglessFillings } from "@/content/data/fillings";
 import { weddingTerms } from "@/content/data/terms";
+import { collectionWindows } from "@/content/data/collection-windows";
 import { LedgerPanel } from "@/components/order/ledger-panel";
 import { ImageUpload } from "@/components/order/image-upload";
 import { TermsStep } from "@/components/order/terms-step";
@@ -52,6 +54,9 @@ export function WeddingForm() {
     dietaryOptions: [],
     tastingWanted: false,
     deliveryMode: "delivery",
+    address: "",
+    collectionWindow: "",
+    flavourFillings: {},
     agreedToTerms: false,
   } as unknown as WeddingOrderFormValues);
 
@@ -59,12 +64,27 @@ export function WeddingForm() {
   const ledger = useMemo(() => computeWeddingLedger(values), [values]);
 
   // Eggless only comes in Vanilla Bean — deselect any other flavour the moment eggless is checked.
+  // If that leaves nothing selected, fall back to Vanilla Bean rather than empty — otherwise the
+  // flavour silently disappears and, with it, the filling picker below.
   useEffect(() => {
     if (!values.dietaryOptions?.includes("eggless")) return;
     const perTier = values.perTierFlavourIds ?? [];
     const filtered = perTier.filter((id) => egglessFlavourIds.includes(id));
-    if (filtered.length !== perTier.length) form.setValue("perTierFlavourIds", filtered, { shouldValidate: true });
+    const next = filtered.length === 0 ? egglessFlavourIds : filtered;
+    if (JSON.stringify(next) !== JSON.stringify(perTier))
+      form.setValue("perTierFlavourIds", next, { shouldValidate: true });
   }, [values.dietaryOptions, values.perTierFlavourIds, form]);
+
+  // A filling chosen from the general list may not exist in the eggless list (or vice versa) —
+  // clear it rather than leave a stale, no-longer-offered choice silently in place.
+  useEffect(() => {
+    const picked = values.flavourFillings?.["vanilla-bean-caramel"];
+    if (!picked) return;
+    const options = values.dietaryOptions?.includes("eggless") ? egglessFillings : fillings;
+    if (!options.some((o) => o.id === picked)) {
+      form.setValue("flavourFillings.vanilla-bean-caramel", "", { shouldValidate: true });
+    }
+  }, [values.dietaryOptions, values.flavourFillings, form]);
 
   // At least one tier must be real cake — pull faux count down if tier count drops below it.
   useEffect(() => {
@@ -81,7 +101,7 @@ export function WeddingForm() {
     ["designBrief"],
     [],
     [],
-    ["deliveryMode", "address"],
+    ["deliveryMode", "address", "collectionWindow"],
     ["fullName", "contactNumber", "email"],
     ["signatureName", "agreedToTerms"],
     [],
@@ -233,6 +253,28 @@ export function WeddingForm() {
               ]}
               register={form.register("dietaryOptions")}
             />
+            {(() => {
+              const customizable = (values.perTierFlavourIds ?? [])
+                .map((id) => flavours.find((f) => f.id === id))
+                .filter((f): f is Flavour => !!f?.hasFillingChoice);
+              if (customizable.length === 0) return null;
+              const options = values.dietaryOptions?.includes("eggless") ? egglessFillings : fillings;
+              return (
+                <div className="space-y-6">
+                  <p className="label text-ink-soft">Filling</p>
+                  {customizable.map((f) => (
+                    <SelectField key={f.id} label={`${f.name} filling`} register={form.register(`flavourFillings.${f.id}`)}>
+                      <option value="">Use the usual filling — {f.filling}</option>
+                      {options.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.label}
+                        </option>
+                      ))}
+                    </SelectField>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -289,6 +331,22 @@ export function WeddingForm() {
                 error={form.formState.errors.address?.message}
               />
             )}
+            {values.deliveryMode === "collection" && (
+              <SelectField
+                label="Collection window"
+                required
+                hint="Kindly select a one-hour collection window that suits you, and we'll have your order ready for collection during this time."
+                register={form.register("collectionWindow")}
+                error={form.formState.errors.collectionWindow?.message}
+              >
+                <option value="">Select…</option>
+                {collectionWindows.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.label}
+                  </option>
+                ))}
+              </SelectField>
+            )}
           </div>
         )}
 
@@ -296,6 +354,12 @@ export function WeddingForm() {
           <div className="space-y-6">
             <TextField label="Full name" required register={form.register("fullName")} error={form.formState.errors.fullName?.message} />
             <TextField label="Contact number" required register={form.register("contactNumber")} error={form.formState.errors.contactNumber?.message} />
+            <TextField
+              label="WhatsApp number (if different)"
+              hint="Only if it's different from the contact number above — we'll message you there for updates."
+              register={form.register("whatsappNumber")}
+              error={form.formState.errors.whatsappNumber?.message}
+            />
             <TextField label="Email (optional)" type="email" register={form.register("email")} error={form.formState.errors.email?.message} />
             <SelectField label="How did you find us?" register={form.register("foundUs")}>
               <option value="">Select…</option>

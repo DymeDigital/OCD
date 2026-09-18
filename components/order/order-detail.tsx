@@ -1,8 +1,8 @@
 import Image from "next/image";
 import type { ReactNode } from "react";
 import type { StoredOrder } from "@/lib/order-store";
-import { formatDateZA } from "@/lib/order-summary";
-import { flavourName } from "@/lib/ledger";
+import { formatDateZA, collectionWindowLabel } from "@/lib/order-summary";
+import { flavourLabel } from "@/lib/ledger";
 import { LedgerPanel } from "@/components/order/ledger-panel";
 import { LedgerRow } from "@/components/register-b";
 import { designTiers } from "@/content/data/designTiers";
@@ -41,10 +41,11 @@ function StandardFields({ data }: { data: OrderFormValues }) {
       <Row label="Making" value={data.productType} />
       <Row label="Guest count" value={data.guestCount} />
       <Row label="Cake shape" value={str(data.cakeShape)} />
-      <Row label="Cake flavour(s)" value={data.cakeFlavourIds?.map(flavourName).join(", ")} />
+      <Row label="Cake flavour" value={data.cakeFlavourId && flavourLabel(data.cakeFlavourId, data.cakeFlavourFillings)} />
       <Row label="Cupcake dozens" value={data.cupcakeDozens} />
-      <Row label="Cupcake flavour(s)" value={data.cupcakeFlavourIds?.map(flavourName).join(", ")} />
-      <Row label="Dietary" value={data.dietaryOptions?.join(", ")} />
+      <Row label="Cupcake flavour" value={data.cupcakeFlavourId && flavourLabel(data.cupcakeFlavourId, data.cupcakeFlavourFillings)} />
+      <Row label="Cake dietary" value={data.cakeDietaryOptions?.join(", ")} />
+      <Row label="Cupcake dietary" value={data.cupcakeDietaryOptions?.join(", ")} />
       <Row
         label="Design tier"
         value={designTiers.find((t) => t.id === data.designTierId)?.label}
@@ -67,7 +68,7 @@ function WeddingFields({ data }: { data: WeddingOrderFormValues }) {
         label="Tiers"
         value={data.tierCount ? `${data.tierCount}${data.fauxTierCount ? ` (${data.fauxTierCount} faux)` : ""}` : undefined}
       />
-      <Row label="Flavour(s)" value={data.perTierFlavourIds?.map(flavourName).join(", ")} />
+      <Row label="Flavour(s)" value={data.perTierFlavourIds?.map((id) => flavourLabel(id, data.flavourFillings)).join(", ")} />
       <Row label="Dietary" value={data.dietaryOptions?.join(", ")} />
       <Row label="Cake table setup" value={data.cakeTableSetup} />
       <Row label="Tasting wanted" value={data.tastingWanted ? "Yes" : "No"} />
@@ -114,11 +115,15 @@ export function OrderDetail({ order }: { order: StoredOrder }) {
 
       <Section title={data.deliveryMode === "delivery" ? "Delivery" : "Collection"}>
         <Row label="Address" value={data.deliveryMode === "delivery" ? data.address : "Collection from OCD"} />
+        {data.deliveryMode === "collection" && (
+          <Row label="Collection window" value={collectionWindowLabel(data.collectionWindow)} />
+        )}
       </Section>
 
       <Section title="Contact">
         <Row label="Full name" value={data.fullName} />
         <Row label="Number" value={data.contactNumber} />
+        <Row label="WhatsApp number" value={str(data.whatsappNumber)} />
         <Row label="Email" value={data.email} />
         <Row label="Found us via" value={str(data.foundUs)} />
       </Section>
