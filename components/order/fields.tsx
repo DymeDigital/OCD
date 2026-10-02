@@ -22,6 +22,7 @@ export function TextField({
   required,
   register,
   type = "text",
+  emphasis,
   ...rest
 }: {
   label: string;
@@ -30,8 +31,27 @@ export function TextField({
   required?: boolean;
   register: UseFormRegisterReturn;
   type?: string;
+  // On an icing ground: the label is set as a question and the input sits on paper.
+  emphasis?: boolean;
 } & React.InputHTMLAttributes<HTMLInputElement>) {
   const errorId = `${register.name}-error`;
+  if (emphasis) {
+    return (
+      <label className="block">
+        <QuestionText required={required}>{label}</QuestionText>
+        {hint && <span className="mt-1 block text-sm text-ink-soft">{hint}</span>}
+        <input
+          type={type}
+          {...register}
+          {...rest}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : undefined}
+          className="mt-3 w-full rounded-[4px] border border-ink bg-paper px-3 py-2.5 text-ink"
+        />
+        <ErrorText id={errorId}>{error}</ErrorText>
+      </label>
+    );
+  }
   return (
     <label className="block">
       <span className="label text-ink-soft">
@@ -97,6 +117,32 @@ export function TextAreaField({
   );
 }
 
+// A required follow-up to the card just picked above it (a flavour's sponge or filling). Indented
+// like a ledger sub-entry — icing ground, ink rule on the left — so it reads as part of that
+// choice, not as more options in the list. `data-scroll-target` is where the forms scroll to
+// when Continue is blocked on it.
+export function FollowUpPanel({ children }: { children: ReactNode }) {
+  return (
+    <div data-scroll-target className="rounded-[4px] border-l-2 border-ink bg-icing p-4 sm:p-5">
+      {children}
+    </div>
+  );
+}
+
+function QuestionText({ children, required }: { children: ReactNode; required?: boolean }) {
+  return (
+    <span className="block font-medium text-ink">
+      {children}
+      {required && (
+        <span className="text-red-ink" aria-hidden>
+          {" "}
+          *
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function SelectField({
   label,
   hint,
@@ -104,6 +150,7 @@ export function SelectField({
   required,
   register,
   children,
+  emphasis,
 }: {
   label: string;
   hint?: string;
@@ -111,8 +158,27 @@ export function SelectField({
   required?: boolean;
   register: UseFormRegisterReturn;
   children: ReactNode;
+  // Inside a FollowUpPanel: the label is set as a question and the select sits on paper.
+  emphasis?: boolean;
 }) {
   const errorId = `${register.name}-error`;
+  if (emphasis) {
+    return (
+      <label className="block">
+        <QuestionText required={required}>{label}</QuestionText>
+        {hint && <span className="mt-1 block text-sm text-ink-soft">{hint}</span>}
+        <select
+          {...register}
+          aria-invalid={!!error}
+          aria-describedby={error ? errorId : undefined}
+          className="mt-3 w-full rounded-[4px] border border-ink bg-paper px-3 py-2.5 text-ink"
+        >
+          {children}
+        </select>
+        <ErrorText id={errorId}>{error}</ErrorText>
+      </label>
+    );
+  }
   return (
     <label className="block">
       <span className="label text-ink-soft">
@@ -145,6 +211,10 @@ export function RadioCardGroup({
   register,
   error,
   hint,
+  selectedValue,
+  renderAfterSelected,
+  emphasis,
+  required,
 }: {
   legend: string;
   name: string;
@@ -152,22 +222,47 @@ export function RadioCardGroup({
   register: UseFormRegisterReturn;
   error?: string;
   hint?: string;
+  // Inside a FollowUpPanel: legend set as a question, cards on paper, and the picked card
+  // inverts to ink so the choice is unmistakable against the icing ground.
+  emphasis?: boolean;
+  required?: boolean;
+  // Injects content (e.g. a follow-up field) directly after the currently selected card, in DOM
+  // order — so on a single-column mobile layout it lands right under the choice it belongs to,
+  // not after the whole list.
+  selectedValue?: string | null;
+  renderAfterSelected?: ReactNode;
 }) {
   const errorId = `${name}-error`;
+  const cardClass = emphasis
+    ? "group cursor-pointer rounded-[4px] border border-ink bg-paper p-4 has-[:checked]:bg-ink has-[:checked]:text-paper has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-red-ink"
+    : "cursor-pointer rounded-[4px] border border-rule p-4 has-[:checked]:border-ink has-[:checked]:bg-icing has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-40";
   return (
     <fieldset>
-      <legend className="label text-ink-soft">{legend}</legend>
+      <legend className={emphasis ? "block" : "label text-ink-soft"}>
+        {emphasis ? <QuestionText required={required}>{legend}</QuestionText> : legend}
+      </legend>
       {hint && <span className="mt-1 block text-sm text-ink-soft">{hint}</span>}
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         {options.map((opt) => (
-          <label
-            key={opt.value}
-            className="cursor-pointer rounded-[4px] border border-rule p-4 has-[:checked]:border-ink has-[:checked]:bg-icing has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-40"
-          >
-            <input type="radio" value={opt.value} disabled={opt.disabled} {...register} className="sr-only" />
-            <span className="block font-medium">{opt.label}</span>
-            {opt.description && <span className="mt-1 block text-sm text-ink-soft">{opt.description}</span>}
-          </label>
+          <div key={opt.value} className="contents">
+            <label className={cardClass}>
+              <input
+                type="radio"
+                value={opt.value}
+                disabled={opt.disabled}
+                {...register}
+                aria-describedby={emphasis && error ? errorId : undefined}
+                className="sr-only"
+              />
+              <span className="block font-medium">{opt.label}</span>
+              {opt.description && (
+                <span className="mt-1 block text-sm text-ink-soft group-has-[:checked]:text-paper">{opt.description}</span>
+              )}
+            </label>
+            {selectedValue === opt.value && renderAfterSelected && (
+              <div className="sm:col-span-2">{renderAfterSelected}</div>
+            )}
+          </div>
         ))}
       </div>
       <ErrorText id={errorId}>{error}</ErrorText>
@@ -184,33 +279,49 @@ export function CheckboxCardGroup({
   legend,
   options,
   register,
+  error,
+  selectedValues,
+  renderAfter,
 }: {
   legend: string;
   options: { value: string; label: string; description?: string }[];
   register: UseFormRegisterReturn;
+  error?: string;
+  // Injects content (e.g. a follow-up field) directly after each checked card, in DOM order — so
+  // on a single-column mobile layout it lands right under the choice it belongs to, not after the
+  // whole list. `renderAfter` may return null/undefined for a value with nothing to show.
+  selectedValues?: string[];
+  renderAfter?: (value: string) => ReactNode;
 }) {
+  const errorId = `${register.name}-error`;
   return (
     <fieldset>
       <legend className="label text-ink-soft">{legend}</legend>
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        {options.map((opt) => (
-          <label
-            key={opt.value}
-            className="flex cursor-pointer items-start gap-3 rounded-[4px] border border-rule p-4 has-[:checked]:border-ink has-[:checked]:bg-icing"
-          >
-            <input
-              type="checkbox"
-              value={opt.value}
-              {...register}
-              className="mt-1 h-4 w-4 shrink-0 rounded-[2px] border border-rule accent-ink"
-            />
-            <span>
-              <span className="block font-medium">{opt.label}</span>
-              {opt.description && <span className="mt-1 block text-sm text-ink-soft">{opt.description}</span>}
-            </span>
-          </label>
-        ))}
+        {options.map((opt) => {
+          const extra = selectedValues?.includes(opt.value) ? renderAfter?.(opt.value) : null;
+          return (
+            <div key={opt.value} className="contents">
+              <label className="flex cursor-pointer items-start gap-3 rounded-[4px] border border-rule p-4 has-[:checked]:border-ink has-[:checked]:bg-icing">
+                <input
+                  type="checkbox"
+                  value={opt.value}
+                  {...register}
+                  aria-invalid={!!error}
+                  aria-describedby={error ? errorId : undefined}
+                  className="mt-1 h-4 w-4 shrink-0 rounded-[2px] border border-rule accent-ink"
+                />
+                <span>
+                  <span className="block font-medium">{opt.label}</span>
+                  {opt.description && <span className="mt-1 block text-sm text-ink-soft">{opt.description}</span>}
+                </span>
+              </label>
+              {extra && <div className="sm:col-span-2">{extra}</div>}
+            </div>
+          );
+        })}
       </div>
+      <ErrorText id={errorId}>{error}</ErrorText>
     </fieldset>
   );
 }

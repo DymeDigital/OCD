@@ -11,11 +11,38 @@ export type Flavour = {
   // Customer can override the default filling above — see content/data/fillings.ts.
   // Client-confirmed 2026-09-18: only Belgian Chocolate and Vanilla Bean offer this.
   hasFillingChoice?: boolean;
+  // Swiss Meringue isn't eggless-safe — the label to show instead of `filling` once eggless is
+  // checked. Only set on flavours in egglessFlavourIds below.
+  egglessFilling?: string;
+  // The customer picks which sponge this flavour is built on: Vanilla Bean or Belgian Chocolate.
+  // Client-confirmed for Cookies & Cream 2026-09-30, Salted Caramel 2026-10-02. Required once the
+  // flavour is chosen.
+  spongeChoices?: { id: string; label: string }[];
 };
+
+export function spongeLabel(flavourId: string, spongeId: string | undefined): string | undefined {
+  if (!spongeId) return undefined;
+  return flavours.find((f) => f.id === flavourId)?.spongeChoices?.find((s) => s.id === spongeId)?.label;
+}
 
 // Client-confirmed 2026-08-16: eggless is only available on the Vanilla Bean sponge. The order
 // forms use this list to auto-deselect incompatible flavours the moment "eggless" is checked.
 export const egglessFlavourIds = ["vanilla-bean-caramel"];
+
+// The "usual filling" text shown to a customer — swaps in the eggless-safe wording once eggless
+// is checked, since Swiss Meringue (mentioned in some `filling` strings) isn't eggless-safe.
+export function defaultFillingLabel(flavour: Flavour, eggless: boolean): string {
+  return eggless && flavour.egglessFilling ? flavour.egglessFilling : flavour.filling;
+}
+
+// The flavour card description on the order forms — flags that a required follow-up choice will
+// appear once this flavour is selected.
+export function flavourCardDescription(flavour: Flavour, eggless: boolean): string {
+  const label = defaultFillingLabel(flavour, eggless);
+  if (flavour.spongeChoices) return `${label} — you'll pick your sponge next.`;
+  if (flavour.hasFillingChoice) return `Usually ${label} — you'll pick your filling next.`;
+  return label;
+}
 
 export const flavours: Flavour[] = [
   {
@@ -31,12 +58,38 @@ export const flavours: Flavour[] = [
   {
     id: "vanilla-bean-caramel",
     name: "Vanilla Bean",
-    filling: "Caramel Ganache Filling (Swiss Meringue Filling Optional)",
+    filling: "Caramel Ganache Filling",
     description:
       "A soft, butter-based delight infused with real vanilla bean for a rich, fragrant flavour. Each layer is filled with a smooth, golden caramel ganache that adds the perfect touch of sweetness.",
     category: "both",
     mostRequested: true,
     hasFillingChoice: true,
+  },
+  {
+    id: "salted-caramel",
+    name: "Salted Caramel",
+    filling: "Signature Salted Caramel Filling",
+    description:
+      "Lusciously layered with our signature salted caramel filling, offering the perfect balance of sweet and salty. Choose between a soft, fragrant vanilla bean sponge or a rich, decadent Belgian chocolate sponge.",
+    category: "both",
+    mostRequested: false,
+    spongeChoices: [
+      { id: "vanilla-bean", label: "Vanilla Bean sponge" },
+      { id: "belgian-chocolate", label: "Belgian Chocolate sponge" },
+    ],
+  },
+  {
+    id: "cookies-and-cream",
+    name: "Cookies & Cream",
+    filling: "Vanilla Bean or Belgian Chocolate Sponge",
+    description:
+      "A dreamy blend of crushed chocolate cookies and creamy filling, layered between your choice of soft Vanilla Bean or rich Belgian Chocolate sponge. Nostalgic, comforting, and perfect for cookie lovers of all ages.",
+    category: "both",
+    mostRequested: false,
+    spongeChoices: [
+      { id: "vanilla-bean", label: "Vanilla Bean sponge" },
+      { id: "belgian-chocolate", label: "Belgian Chocolate sponge" },
+    ],
   },
   {
     id: "lemon-blueberry",
@@ -75,29 +128,11 @@ export const flavours: Flavour[] = [
     mostRequested: false,
   },
   {
-    id: "salted-caramel",
-    name: "Salted Caramel",
-    filling: "Signature Salted Caramel Filling",
-    description:
-      "Lusciously layered with our signature salted caramel filling, offering the perfect balance of sweet and salty. Choose between a soft, fragrant vanilla bean sponge or a rich, decadent Belgian chocolate sponge.",
-    category: "both",
-    mostRequested: false,
-  },
-  {
     id: "raspberry-white-chocolate",
     name: "Raspberry",
     filling: "White Chocolate Filling",
     description:
       "A delicate, buttery sponge layered with smooth Callebaut white chocolate and bursts of fresh raspberries. The natural tartness of the berries pairs perfectly with the creamy sweetness of white chocolate.",
-    category: "both",
-    mostRequested: false,
-  },
-  {
-    id: "cookies-and-cream",
-    name: "Cookies & Cream",
-    filling: "Vanilla Bean or Belgian Chocolate Sponge",
-    description:
-      "A dreamy blend of crushed chocolate cookies and creamy filling, layered between your choice of soft Vanilla Bean or rich Belgian Chocolate sponge. Nostalgic, comforting, and perfect for cookie lovers of all ages.",
     category: "both",
     mostRequested: false,
   },

@@ -1,6 +1,7 @@
 import { sizes, sizesForServings } from "@/content/data/sizes";
 import { confections, cupcakeBase } from "@/content/data/confections";
-import { flavours } from "@/content/data/flavours";
+import { cupcakeStyles } from "@/content/data/cupcake-styles";
+import { flavours, spongeLabel } from "@/content/data/flavours";
 import { fillingName } from "@/content/data/fillings";
 import type { OrderFormValues } from "@/lib/schemas";
 import type { WeddingOrderFormValues } from "@/lib/schemas";
@@ -36,7 +37,9 @@ export function computeOrderLedger(values: Partial<OrderFormValues>): Ledger {
 
   if ((values.productType === "cake" || values.productType === "both") && values.guestCount) {
     const candidates = sizesForServings(values.guestCount);
-    const chosen = values.sizeId ? candidates.find((s) => s.id === values.sizeId) : undefined;
+    // Look up the chosen size across the full list, not just guest-count matches — a customer can
+    // deliberately pick a bigger or smaller cake than their guest count would suggest.
+    const chosen = values.sizeId ? sizes.find((s) => s.id === values.sizeId) : undefined;
     const match = chosen ?? candidates[0] ?? sizes.find((s) => s.servingsMax >= (values.guestCount ?? 0));
     if (match) {
       lines.push({
@@ -49,10 +52,14 @@ export function computeOrderLedger(values: Partial<OrderFormValues>): Ledger {
   }
 
   if ((values.productType === "cupcakes" || values.productType === "both") && values.cupcakeDozens) {
-    const amount = cupcakeBase.priceFrom * values.cupcakeDozens;
+    const style = cupcakeStyles.find((s) => s.id === values.cupcakeStyleId);
+    const variant = style?.variants?.find((v) => v.id === values.cupcakeStyleVariantId);
+    const unitPrice = variant?.priceFrom ?? style?.priceFrom ?? cupcakeBase.priceFrom;
+    const styleDetail = variant ? `${style!.label} — ${variant.label}` : style?.label;
+    const amount = unitPrice * values.cupcakeDozens;
     lines.push({
       label: "Gourmet cupcakes",
-      detail: `${values.cupcakeDozens} dozen`,
+      detail: `${values.cupcakeDozens} dozen${styleDetail ? ` — ${styleDetail}` : ""}`,
       amount,
     });
     priceFrom += amount;
@@ -109,10 +116,14 @@ export function flavourName(id: string): string {
   return flavours.find((f) => f.id === id)?.name ?? id;
 }
 
-export function flavourLabel(id: string, flavourFillings?: Record<string, string>): string {
+export function flavourLabel(
+  id: string,
+  flavourFillings?: Record<string, string>,
+  flavourSponges?: Record<string, string>
+): string {
   const name = flavourName(id);
-  const overrideLabel = fillingName(flavourFillings?.[id]);
-  return overrideLabel ? `${name} (${overrideLabel})` : name;
+  const extras = [spongeLabel(id, flavourSponges?.[id]), fillingName(flavourFillings?.[id])].filter(Boolean);
+  return extras.length ? `${name} (${extras.join(", ")})` : name;
 }
 
 export { formatRange, formatPriceFrom };

@@ -1,6 +1,8 @@
 // Shared between the client (components/order/image-upload.tsx) and the server
 // (app/api/submit-order/route.ts) — the client's checks are a convenience, this file is what
 // actually gets enforced, since a client can send anything it likes.
+// Client-confirmed 2026-09-30: at least one reference image is required on every order.
+export const MIN_FILES = 1;
 export const MAX_FILES = 5;
 export const MAX_SIZE_BYTES = 10 * 1024 * 1024;
 export const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/heic", "image/heif"];

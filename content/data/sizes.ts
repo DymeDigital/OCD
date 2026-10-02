@@ -23,9 +23,10 @@ export const sizes: SizeOption[] = [
   // Client-confirmed 2026-09-18: this is the only bento box option — a 12cm bento does not exist.
   // Servings estimated from the 10cm mini (1–4) + 5 cupcakes — TODO(client): confirm exact servings for this bento.
   { id: "bento-10", tier: 1, tierLabel: "Bento box", sizesCm: [10], layersNote: "2 layers + 5 cupcakes", servingsMin: 6, servingsMax: 9, priceFrom: 950, weddingEligible: false, ledgerLabel: "Bento box" },
-  // Client-confirmed 2026-09-18: NOT a bento box, no cupcakes included — a larger mini cake.
-  { id: "mini-12-3l", tier: 1, tierLabel: "Mini", sizesCm: [12], layersNote: "3 layers", servingsMin: 10, servingsMax: 12, priceFrom: 1000, weddingEligible: false },
   // Single Tier
+  // Client-confirmed 2026-09-19: this is NOT a mini cake — it's a Single Tier, 8–10 servings (was
+  // filed as "Mini", 10–12 servings). No cupcakes included.
+  { id: "1t-12-3l", tier: 1, tierLabel: "Single Tier", sizesCm: [12], layersNote: "3 layers", servingsMin: 8, servingsMax: 10, priceFrom: 1000, weddingEligible: false },
   { id: "1t-12", tier: 1, tierLabel: "Single Tier", sizesCm: [12], layersNote: "4 layers", servingsMin: 12, servingsMax: 16, priceFrom: 1250 },
   { id: "1t-15", tier: 1, tierLabel: "Single Tier", sizesCm: [15], layersNote: "4 layers", servingsMin: 20, servingsMax: 25, priceFrom: 1500 },
   { id: "1t-17", tier: 1, tierLabel: "Single Tier", sizesCm: [17], layersNote: "4 layers", servingsMin: 26, servingsMax: 32, priceFrom: 2000 },

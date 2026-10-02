@@ -1,7 +1,6 @@
 import { z } from "zod";
-import { standardTerms } from "@/content/data/terms";
 import { normalizeSAWhatsAppNumber } from "@/lib/phone";
-import { egglessFlavourIds } from "@/content/data/flavours";
+import { egglessFlavourIds, flavours } from "@/content/data/flavours";
 
 // §9: multi-step, one decision per step. These schemas are written once and are meant to be
 // reused server-side unchanged in Phase 2 (§4) — validation rules live here, not in the UI.
@@ -25,6 +24,15 @@ function optionalEnum<T extends readonly [string, ...string[]]>(values: T) {
     (v) => (v === "" || v === null ? undefined : v),
     z.enum(values).optional()
   );
+}
+
+// A RadioCardGroup with nothing selected reaches the schema as `null`, not `undefined` — `.optional()`
+// alone only tolerates the latter and fails with Zod's raw "expected string, received null" instead
+// of the friendly required-field message a conditional `.refine()` attaches below. `.nullable()`
+// accepts null outright (kept as `string | null | undefined` rather than transformed away, so
+// downstream consumers' existing `string | ... | null | undefined` types still line up).
+function optionalString() {
+  return z.string().nullable().optional();
 }
 
 const contactFields = {
@@ -74,7 +82,28 @@ const deliveryFields = {
 // or missing means "use the flavour's usual filling".
 const fillingFields = {
   flavourFillings: z.record(z.string(), z.string()).optional(),
+  // Keyed by flavour id, like flavourFillings — only for flavours with spongeChoices (flavours.ts).
+  flavourSponges: z.record(z.string(), z.string()).optional(),
 };
+
+// A flavour with spongeChoices (Cookies & Cream, Salted Caramel) needs one picked — true when it
+// has one, or when the flavour has no sponge choice at all.
+function hasRequiredSponge(flavourId: string | null | undefined, sponges: Record<string, string> | undefined) {
+  if (!flavourId) return true;
+  const choices = flavours.find((f) => f.id === flavourId)?.spongeChoices;
+  if (!choices) return true;
+  return choices.some((c) => c.id === sponges?.[flavourId]);
+}
+export const spongeRequiredMessage = "Pick a sponge so we know what to bake.";
+
+// Client-requested 2026-10-01: a flavour with hasFillingChoice needs an explicit filling pick
+// (which can be USUAL_FILLING_ID, "our usual") — true when it has one or has no filling choice.
+function hasRequiredFilling(flavourId: string | null | undefined, picked: Record<string, string> | undefined) {
+  if (!flavourId) return true;
+  if (!flavours.find((f) => f.id === flavourId)?.hasFillingChoice) return true;
+  return !!picked?.[flavourId];
+}
+export const fillingRequiredMessage = "Pick a filling — or keep our usual one.";
 
 // The standard order form splits fillings per branch (not the single flavourFillings above) so a
 // "both" order can pick a different filling for the cake vs. the cupcakes even when they share the
@@ -83,6 +112,8 @@ const fillingFields = {
 const branchedFillingFields = {
   cakeFlavourFillings: z.record(z.string(), z.string()).optional(),
   cupcakeFlavourFillings: z.record(z.string(), z.string()).optional(),
+  cakeFlavourSponges: z.record(z.string(), z.string()).optional(),
+  cupcakeFlavourSponges: z.record(z.string(), z.string()).optional(),
 };
 
 // `confectionId` (not `id`) deliberately — react-hook-form's useFieldArray injects its own
@@ -106,11 +137,16 @@ const orderObjectSchema = z.object({
   // box both fit) — lets the customer pick between them instead of always getting the cheapest.
   sizeId: z.string().optional(),
   cakeShape: optionalEnum(cakeShapes),
-  cakeFlavourId: z.string().optional(),
+  // Optional at the field level (like guestCount above) — conditional required-ness for the
+  // cake/both branch lives in the refine below.
+  cakeFlavourId: optionalString(),
 
   // Cupcake branch
   cupcakeDozens: z.number().int().min(1, "Let us know how many dozen you'd like.").optional(),
-  cupcakeFlavourId: z.string().optional(),
+  cupcakeStyleId: optionalString(),
+  // Only meaningful for styles with variants (currently just "characters-logos" — print type).
+  cupcakeStyleVariantId: optionalString(),
+  cupcakeFlavourId: optionalString(),
 
   // Split per branch (not one shared field) so eggless can be picked for just the cake or just
   // the cupcakes on a "both" order without forcing the other branch to Vanilla Bean too.
@@ -140,19 +176,10 @@ export const orderSchema = orderObjectSchema
     message: "Please pick a collection time window.",
     path: ["collectionWindow"],
   })
-  .refine(
-    (v) => {
-      if (!v.eventDate) return true; // let the required-field message own this case
-      const min = new Date();
-      min.setHours(0, 0, 0, 0);
-      min.setDate(min.getDate() + standardTerms.minLeadTimeDays);
-      return new Date(v.eventDate) >= min;
-    },
-    {
-      message: `Standard orders need at least ${standardTerms.minLeadTimeDays} days' notice — pick a later date, or get in touch to check availability.`,
-      path: ["eventDate"],
-    }
-  )
+  // Client-confirmed 2026-09-19: the 14-day standard lead time is guidance, not a hard cutoff —
+  // last-minute orders are still accepted where the production schedule allows, so a date within
+  // that window no longer fails validation. order-form.tsx shows a non-blocking heads-up instead
+  // (see isWithinLeadTime there) when the chosen date falls inside standardTerms.minLeadTimeDays.
   .refine((v) => v.productType === "cupcakes" || typeof v.guestCount === "number", {
     message: "Let us know how many guests you're expecting.",
     path: ["guestCount"],
@@ -160,6 +187,18 @@ export const orderSchema = orderObjectSchema
   .refine((v) => v.productType === "cake" || typeof v.cupcakeDozens === "number", {
     message: "Let us know how many dozen you'd like.",
     path: ["cupcakeDozens"],
+  })
+  .refine((v) => v.productType === "cupcakes" || !!v.cakeFlavourId, {
+    message: "Pick a cake flavour.",
+    path: ["cakeFlavourId"],
+  })
+  .refine((v) => v.productType === "cake" || !!v.cupcakeFlavourId, {
+    message: "Pick a cupcake flavour.",
+    path: ["cupcakeFlavourId"],
+  })
+  .refine((v) => !!v.designTierId, {
+    message: "Pick a design complexity so we know what to quote.",
+    path: ["designTierId"],
   })
   .refine(
     (v) => {
@@ -180,7 +219,23 @@ export const orderSchema = orderObjectSchema
       message: "Eggless is only available in Vanilla Bean — change the cupcake flavour, or unselect eggless.",
       path: ["cupcakeDietaryOptions"],
     }
-  );
+  )
+  .refine((v) => v.productType === "cupcakes" || hasRequiredSponge(v.cakeFlavourId, v.cakeFlavourSponges), {
+    message: spongeRequiredMessage,
+    path: ["cakeFlavourSponges"],
+  })
+  .refine((v) => v.productType === "cake" || hasRequiredSponge(v.cupcakeFlavourId, v.cupcakeFlavourSponges), {
+    message: spongeRequiredMessage,
+    path: ["cupcakeFlavourSponges"],
+  })
+  .refine((v) => v.productType === "cupcakes" || hasRequiredFilling(v.cakeFlavourId, v.cakeFlavourFillings), {
+    message: fillingRequiredMessage,
+    path: ["cakeFlavourFillings"],
+  })
+  .refine((v) => v.productType === "cake" || hasRequiredFilling(v.cupcakeFlavourId, v.cupcakeFlavourFillings), {
+    message: fillingRequiredMessage,
+    path: ["cupcakeFlavourFillings"],
+  });
 // z.input (not z.infer/output) — react-hook-form types `useForm<T>` against the raw, pre-default
 // shape it actually manages; zodResolver maps that to the post-default output at validation time.
 export type OrderFormValues = z.input<typeof orderObjectSchema>;
@@ -234,5 +289,13 @@ export const weddingOrderSchema = weddingObjectSchema
       message: "Eggless is only available in Vanilla Bean — remove the other flavours, or unselect eggless.",
       path: ["dietaryOptions"],
     }
-  );
+  )
+  .refine((v) => v.perTierFlavourIds.every((id) => hasRequiredSponge(id, v.flavourSponges)), {
+    message: spongeRequiredMessage,
+    path: ["flavourSponges"],
+  })
+  .refine((v) => v.perTierFlavourIds.every((id) => hasRequiredFilling(id, v.flavourFillings)), {
+    message: fillingRequiredMessage,
+    path: ["flavourFillings"],
+  });
 export type WeddingOrderFormValues = z.input<typeof weddingObjectSchema>;

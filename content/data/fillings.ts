@@ -20,7 +20,12 @@ export const egglessFillings: Filling[] = [
   { id: "white-chocolate-ganache", label: "White Chocolate ganache" },
 ];
 
+// Client-requested 2026-10-01: the filling is now an explicit, required choice, so keeping the
+// flavour's standard filling is its own option rather than an empty "default". Displays as the
+// plain flavour name, same as before.
+export const USUAL_FILLING_ID = "usual";
+
 export function fillingName(id: string | undefined): string | undefined {
-  if (!id) return undefined;
+  if (!id || id === USUAL_FILLING_ID) return undefined;
   return fillings.find((f) => f.id === id)?.label ?? egglessFillings.find((f) => f.id === id)?.label;
 }

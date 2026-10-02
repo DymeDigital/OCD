@@ -41,9 +41,9 @@ function StandardFields({ data }: { data: OrderFormValues }) {
       <Row label="Making" value={data.productType} />
       <Row label="Guest count" value={data.guestCount} />
       <Row label="Cake shape" value={str(data.cakeShape)} />
-      <Row label="Cake flavour" value={data.cakeFlavourId && flavourLabel(data.cakeFlavourId, data.cakeFlavourFillings)} />
+      <Row label="Cake flavour" value={data.cakeFlavourId && flavourLabel(data.cakeFlavourId, data.cakeFlavourFillings, data.cakeFlavourSponges)} />
       <Row label="Cupcake dozens" value={data.cupcakeDozens} />
-      <Row label="Cupcake flavour" value={data.cupcakeFlavourId && flavourLabel(data.cupcakeFlavourId, data.cupcakeFlavourFillings)} />
+      <Row label="Cupcake flavour" value={data.cupcakeFlavourId && flavourLabel(data.cupcakeFlavourId, data.cupcakeFlavourFillings, data.cupcakeFlavourSponges)} />
       <Row label="Cake dietary" value={data.cakeDietaryOptions?.join(", ")} />
       <Row label="Cupcake dietary" value={data.cupcakeDietaryOptions?.join(", ")} />
       <Row
@@ -68,7 +68,7 @@ function WeddingFields({ data }: { data: WeddingOrderFormValues }) {
         label="Tiers"
         value={data.tierCount ? `${data.tierCount}${data.fauxTierCount ? ` (${data.fauxTierCount} faux)` : ""}` : undefined}
       />
-      <Row label="Flavour(s)" value={data.perTierFlavourIds?.map((id) => flavourLabel(id, data.flavourFillings)).join(", ")} />
+      <Row label="Flavour(s)" value={data.perTierFlavourIds?.map((id) => flavourLabel(id, data.flavourFillings, data.flavourSponges)).join(", ")} />
       <Row label="Dietary" value={data.dietaryOptions?.join(", ")} />
       <Row label="Cake table setup" value={data.cakeTableSetup} />
       <Row label="Tasting wanted" value={data.tastingWanted ? "Yes" : "No"} />

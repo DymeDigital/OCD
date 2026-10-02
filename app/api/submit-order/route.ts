@@ -4,6 +4,7 @@ import { orderSchema, weddingOrderSchema } from "@/lib/schemas";
 import { computeOrderLedger, computeWeddingLedger, type Ledger } from "@/lib/ledger";
 import type { OrderFormValues, WeddingOrderFormValues } from "@/lib/schemas";
 import {
+  MIN_FILES,
   MAX_FILES,
   MAX_SIZE_BYTES,
   ACCEPTED_TYPES,
@@ -100,6 +101,9 @@ export async function POST(request: Request) {
   }
 
   const files = formData.getAll("files").filter((f): f is File => f instanceof File);
+  if (files.length < MIN_FILES) {
+    return NextResponse.json({ error: "At least one reference image is required." }, { status: 400 });
+  }
   if (files.length > MAX_FILES) {
     return NextResponse.json({ error: `Too many files — max ${MAX_FILES}.` }, { status: 400 });
   }

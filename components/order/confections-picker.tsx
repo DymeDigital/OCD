@@ -8,6 +8,12 @@ import { formatPriceFrom, formatZAR } from "@/lib/pricing";
 
 export function ConfectionsPicker({ form }: { form: UseFormReturn<OrderFormValues> }) {
   const { fields, append, remove } = useFieldArray({ control: form.control, name: "confections" });
+  // Array-level Zod errors land as one entry per row (undefined for valid rows) rather than a
+  // single top-level message — a generic line is enough to send the customer back to fix whichever
+  // quantity they cleared, without needing to thread a per-row error into each number input.
+  const hasConfectionsError = Array.isArray(form.formState.errors.confections)
+    ? form.formState.errors.confections.some(Boolean)
+    : !!form.formState.errors.confections;
 
   function indexOf(confectionId: string) {
     return fields.findIndex((f) => f.confectionId === confectionId);
@@ -23,6 +29,11 @@ export function ConfectionsPicker({ form }: { form: UseFormReturn<OrderFormValue
     <fieldset>
       <legend className="label text-ink-soft">Signature Confections (optional)</legend>
       <p className="mt-1 text-sm text-ink-soft">Add any of these to your order — tick, then set a quantity.</p>
+      {hasConfectionsError && (
+        <p role="alert" className="mt-2 text-sm font-medium text-red-ink">
+          Check the quantities above — each one needs to be between 1 and 20.
+        </p>
+      )}
       <div className="mt-4 space-y-3">
         {confections.map((c) => {
           const idx = indexOf(c.id);

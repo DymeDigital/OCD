@@ -87,9 +87,9 @@ function standardDetailRows(data: OrderFormValues): string {
     fieldRow("Making", data.productType),
     fieldRow("Guest count", data.guestCount),
     fieldRow("Cake shape", str(data.cakeShape)),
-    fieldRow("Cake flavour", data.cakeFlavourId && flavourLabel(data.cakeFlavourId, data.cakeFlavourFillings)),
+    fieldRow("Cake flavour", data.cakeFlavourId && flavourLabel(data.cakeFlavourId, data.cakeFlavourFillings, data.cakeFlavourSponges)),
     fieldRow("Cupcake dozens", data.cupcakeDozens),
-    fieldRow("Cupcake flavour", data.cupcakeFlavourId && flavourLabel(data.cupcakeFlavourId, data.cupcakeFlavourFillings)),
+    fieldRow("Cupcake flavour", data.cupcakeFlavourId && flavourLabel(data.cupcakeFlavourId, data.cupcakeFlavourFillings, data.cupcakeFlavourSponges)),
     fieldRow("Cake dietary", data.cakeDietaryOptions?.join(", ")),
     fieldRow("Cupcake dietary", data.cupcakeDietaryOptions?.join(", ")),
     fieldRow("Design tier", designTiers.find((t) => t.id === data.designTierId)?.label),
@@ -111,7 +111,7 @@ function weddingDetailRows(data: WeddingOrderFormValues): string {
         ? `${data.tierCount}${data.fauxTierCount ? ` (${data.fauxTierCount} faux)` : ""}`
         : undefined
     ),
-    fieldRow("Flavour(s)", data.perTierFlavourIds?.map((id) => flavourLabel(id, data.flavourFillings)).join(", ")),
+    fieldRow("Flavour(s)", data.perTierFlavourIds?.map((id) => flavourLabel(id, data.flavourFillings, data.flavourSponges)).join(", ")),
     fieldRow("Dietary", data.dietaryOptions?.join(", ")),
     fieldRow("Cake table setup", data.cakeTableSetup),
     fieldRow("Tasting wanted", data.tastingWanted ? "Yes" : "No"),

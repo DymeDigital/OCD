@@ -4,17 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePersistedForm, clearPersistedForm } from "@/lib/use-persisted-form";
-import { weddingOrderSchema, deliveryModes, foundUsOptions, type WeddingOrderFormValues } from "@/lib/schemas";
+import { weddingOrderSchema, deliveryModes, foundUsOptions, spongeRequiredMessage, fillingRequiredMessage, type WeddingOrderFormValues } from "@/lib/schemas";
 import { computeWeddingLedger } from "@/lib/ledger";
-import { flavours, egglessFlavourIds, type Flavour } from "@/content/data/flavours";
-import { fillings, egglessFillings } from "@/content/data/fillings";
+import { flavours, egglessFlavourIds, defaultFillingLabel, flavourCardDescription } from "@/content/data/flavours";
+import { fillings, egglessFillings, USUAL_FILLING_ID } from "@/content/data/fillings";
 import { weddingTerms } from "@/content/data/terms";
 import { collectionWindows } from "@/content/data/collection-windows";
 import { LedgerPanel } from "@/components/order/ledger-panel";
-import { ImageUpload } from "@/components/order/image-upload";
+import { ImageUpload, imageRequiredMessage, scrollToImageUpload } from "@/components/order/image-upload";
 import { TermsStep } from "@/components/order/terms-step";
 import { SubmitFallback } from "@/components/order/submit-fallback";
-import { TextField, TextAreaField, SelectField, RadioCardGroup, CheckboxCardGroup } from "@/components/order/fields";
+import { TextField, TextAreaField, SelectField, RadioCardGroup, CheckboxCardGroup, FollowUpPanel } from "@/components/order/fields";
 import { Button } from "@/components/button";
 import { buildOrderPlainText, type OrderSummaryInput } from "@/lib/order-summary";
 
@@ -39,7 +39,17 @@ const tierCountOptions = [1, 2, 3, 4, 5, 6];
 export function WeddingForm() {
   const router = useRouter();
   const [step, setStep] = useState(0);
-  const [files, setFiles] = useState<File[]>([]);
+  // Each step can be a different length — without this, moving on from a long step leaves the next
+  // one scrolled to wherever the previous one ended, hiding its heading and first fields.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [step]);
+  const [files, setFilesState] = useState<File[]>([]);
+  const [filesError, setFilesError] = useState<string | undefined>();
+  function setFiles(next: File[]) {
+    setFilesState(next);
+    if (next.length > 0) setFilesError(undefined);
+  }
   const [submitFallback, setSubmitFallback] = useState<{ summaryText: string; token: string | null } | null>(
     null
   );
@@ -57,6 +67,7 @@ export function WeddingForm() {
     address: "",
     collectionWindow: "",
     flavourFillings: {},
+    flavourSponges: {},
     agreedToTerms: false,
   } as unknown as WeddingOrderFormValues);
 
@@ -81,7 +92,7 @@ export function WeddingForm() {
     const picked = values.flavourFillings?.["vanilla-bean-caramel"];
     if (!picked) return;
     const options = values.dietaryOptions?.includes("eggless") ? egglessFillings : fillings;
-    if (!options.some((o) => o.id === picked)) {
+    if (picked !== USUAL_FILLING_ID && !options.some((o) => o.id === picked)) {
       form.setValue("flavourFillings.vanilla-bean-caramel", "", { shouldValidate: true });
     }
   }, [values.dietaryOptions, values.flavourFillings, form]);
@@ -97,7 +108,7 @@ export function WeddingForm() {
     ["partnerNames", "venue", "venueContact"],
     ["weddingDate", "weddingTime"],
     ["guestCount", "tierCount", "fauxTierCount"],
-    [],
+    ["dietaryOptions"],
     ["designBrief"],
     [],
     [],
@@ -109,7 +120,40 @@ export function WeddingForm() {
 
   async function goNext() {
     const fields = stepFields[step];
-    const valid = fields.length === 0 ? true : await form.trigger(fields as never[]);
+    let valid = fields.length === 0 ? true : await form.trigger(fields as never[]);
+
+    // The schema's sponge/filling refines only run once every field type-checks, which never
+    // happens mid-wizard — so a picked flavour's required follow-up is checked here directly.
+    if (step === 3) {
+      form.clearErrors(["flavourSponges", "flavourFillings"]);
+      let firstMissing: string | undefined;
+      for (const id of values.perTierFlavourIds ?? []) {
+        const flavour = flavours.find((f) => f.id === id);
+        if (flavour?.spongeChoices && !values.flavourSponges?.[id]) {
+          form.setError(`flavourSponges.${id}` as never, { type: "manual", message: spongeRequiredMessage });
+          firstMissing ??= `flavourSponges.${id}`;
+        }
+        if (flavour?.hasFillingChoice && !values.flavourFillings?.[id]) {
+          form.setError(`flavourFillings.${id}` as never, { type: "manual", message: fillingRequiredMessage });
+          firstMissing ??= `flavourFillings.${id}`;
+        }
+      }
+      if (firstMissing) {
+        document
+          .querySelector(`[name="${firstMissing}"]`)
+          ?.closest("[data-scroll-target]")
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+        valid = false;
+      }
+    }
+
+    // Files live in component state, not the form schema.
+    if (step === 4 && files.length === 0) {
+      setFilesError(imageRequiredMessage);
+      if (valid) scrollToImageUpload();
+      valid = false;
+    }
+
     if (valid) setStep((s) => Math.min(s + 1, steps.length - 1));
   }
 
@@ -118,6 +162,12 @@ export function WeddingForm() {
   }
 
   async function onSubmit(data: WeddingOrderFormValues) {
+    // Files aren't autosaved, so guard here too rather than let the server reject the order.
+    if (files.length === 0) {
+      setFilesError(imageRequiredMessage);
+      setStep(4);
+      return;
+    }
     const summaryInput: OrderSummaryInput = { token: null, kind: "wedding", data, ledger };
 
     const body = new FormData();
@@ -241,40 +291,69 @@ export function WeddingForm() {
         {step === 3 && (
           <div className="space-y-8">
             <CheckboxCardGroup
-              legend="Flavour(s) — pick one per tier, or mix it up"
-              options={flavours.map((f) => ({ value: f.id, label: f.name, description: f.filling }))}
-              register={form.register("perTierFlavourIds")}
-            />
-            <CheckboxCardGroup
               legend="Dietary options"
               options={[
                 { value: "gluten-free", label: "Gluten free" },
                 { value: "eggless", label: "Eggless", description: "Available in Vanilla only" },
               ]}
               register={form.register("dietaryOptions")}
+              error={form.formState.errors.dietaryOptions?.message}
             />
-            {(() => {
-              const customizable = (values.perTierFlavourIds ?? [])
-                .map((id) => flavours.find((f) => f.id === id))
-                .filter((f): f is Flavour => !!f?.hasFillingChoice);
-              if (customizable.length === 0) return null;
-              const options = values.dietaryOptions?.includes("eggless") ? egglessFillings : fillings;
-              return (
-                <div className="space-y-6">
-                  <p className="label text-ink-soft">Filling</p>
-                  {customizable.map((f) => (
-                    <SelectField key={f.id} label={`${f.name} filling`} register={form.register(`flavourFillings.${f.id}`)}>
-                      <option value="">Use the usual filling — {f.filling}</option>
-                      {options.map((o) => (
-                        <option key={o.id} value={o.id}>
-                          {o.label}
-                        </option>
-                      ))}
-                    </SelectField>
-                  ))}
-                </div>
-              );
-            })()}
+            <CheckboxCardGroup
+              legend="Flavour(s) — pick one per tier, or mix it up"
+              options={flavours.map((f) => ({
+                value: f.id,
+                label: f.name,
+                description: flavourCardDescription(f, !!values.dietaryOptions?.includes("eggless")),
+              }))}
+              register={form.register("perTierFlavourIds")}
+              selectedValues={values.perTierFlavourIds ?? []}
+              renderAfter={(id) => {
+                const flavour = flavours.find((f) => f.id === id);
+                if (!flavour || (!flavour.spongeChoices && !flavour.hasFillingChoice)) return null;
+                const weddingEggless = !!values.dietaryOptions?.includes("eggless");
+                const options = weddingEggless ? egglessFillings : fillings;
+                type NestedErrors = (Record<string, { message?: string }> & { message?: string }) | undefined;
+                const spongeErrors = form.formState.errors.flavourSponges as NestedErrors;
+                const fillingErrors = form.formState.errors.flavourFillings as NestedErrors;
+                return (
+                  <FollowUpPanel>
+                  <div className="space-y-6">
+                    {flavour.spongeChoices && (
+                      <RadioCardGroup
+                        emphasis
+                        required
+                        legend={`Which sponge for your ${flavour.name} tier?`}
+                        hint="Pick one to continue."
+                        name={`flavourSponges.${flavour.id}`}
+                        options={flavour.spongeChoices.map((s) => ({ value: s.id, label: s.label }))}
+                        register={form.register(`flavourSponges.${flavour.id}`)}
+                        error={spongeErrors?.[flavour.id]?.message ?? spongeErrors?.message}
+                      />
+                    )}
+                    {flavour.hasFillingChoice && (
+                      <SelectField
+                        emphasis
+                        required
+                        label={`Which filling for your ${flavour.name} tier?`}
+                        hint="Pick one to continue — or keep our usual."
+                        register={form.register(`flavourFillings.${flavour.id}`)}
+                        error={fillingErrors?.[flavour.id]?.message ?? fillingErrors?.message}
+                      >
+                        <option value="">Select a filling…</option>
+                        <option value={USUAL_FILLING_ID}>Our usual — {defaultFillingLabel(flavour, weddingEggless)}</option>
+                        {options.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </SelectField>
+                    )}
+                  </div>
+                  </FollowUpPanel>
+                );
+              }}
+            />
           </div>
         )}
 
@@ -288,7 +367,7 @@ export function WeddingForm() {
               error={form.formState.errors.designBrief?.message}
               rows={6}
             />
-            <ImageUpload files={files} onChange={setFiles} />
+            <ImageUpload files={files} onChange={setFiles} requiredError={filesError} />
           </div>
         )}
 
@@ -419,7 +498,7 @@ export function WeddingForm() {
         </div>
       </form>
 
-      <LedgerPanel ledger={ledger} className="order-first lg:order-last" />
+      <LedgerPanel ledger={ledger} className="lg:order-last" />
     </div>
   );
 }
