@@ -60,3 +60,127 @@ export function sizesForServings(guestCount: number): SizeOption[] {
     .filter((s) => guestCount >= s.servingsMin && guestCount <= s.servingsMax)
     .sort((a, b) => a.priceFrom - b.priceFrom);
 }
+
+/** The size a cake/cupcake order is quoted on: the customer's own pick (which may be deliberately
+ * bigger or smaller than the guest count suggests), else the cheapest fit, else the first size big
+ * enough. */
+export function resolveCakeSize(guestCount: number | undefined, sizeId: string | undefined): SizeOption | undefined {
+  const chosen = sizeId ? sizes.find((s) => s.id === sizeId) : undefined;
+  if (chosen) return chosen;
+  if (!guestCount) return undefined;
+  return sizesForServings(guestCount)[0] ?? sizes.find((s) => s.servingsMax >= guestCount);
+}
+
+export const weddingSizes = sizes.filter((s) => s.weddingEligible !== false);
+
+/** The size a wedding cake is quoted on. A size the couple picked themselves wins (the form keeps
+ * tierCount in step with it); otherwise the guest-count fit at that tier count — or, with no exact
+ * fit, the LARGEST size at that tier count, so the floor never understates the price. */
+export function resolveWeddingSize(
+  guestCount: number | undefined,
+  tierCount: number | undefined,
+  sizeId: string | undefined
+): { size: SizeOption | undefined; exact: boolean; chosen: boolean } {
+  const chosen = sizeId ? weddingSizes.find((s) => s.id === sizeId) : undefined;
+  if (chosen && (!tierCount || chosen.tier === tierCount)) return { size: chosen, exact: true, chosen: true };
+  if (!tierCount) return { size: undefined, exact: false, chosen: false };
+  const tierSizes = weddingSizes.filter((s) => s.tier === tierCount);
+  const exactMatch = guestCount
+    ? tierSizes.find((s) => guestCount >= s.servingsMin && guestCount <= s.servingsMax)
+    : undefined;
+  return { size: exactMatch ?? tierSizes[tierSizes.length - 1], exact: !!exactMatch, chosen: false };
+}
+
+// Client-supplied 2026-10-24 (chat, not yet in the Product Guide PDF): rectangle/table cakes,
+// offered on both order forms. A guideline only — the baker can do wider or longer cakes.
+export type TableCakeSize = {
+  id: string;
+  widthCm: number;
+  lengthCm: number;
+  servingsMin?: number;
+  servingsMax?: number;
+  priceFrom: number; // ZAR
+};
+
+export const tableCakeSizes: TableCakeSize[] = [
+  { id: "table-9x18", widthCm: 9, lengthCm: 18, servingsMin: 10, servingsMax: 16, priceFrom: 1250 },
+  { id: "table-13x25", widthCm: 13, lengthCm: 25, servingsMin: 16, servingsMax: 20, priceFrom: 1800 },
+  { id: "table-13x50", widthCm: 13, lengthCm: 50, servingsMin: 30, servingsMax: 35, priceFrom: 3500 },
+  { id: "table-13x60", widthCm: 13, lengthCm: 60, servingsMin: 40, servingsMax: 45, priceFrom: 4500 },
+  { id: "table-13x75", widthCm: 13, lengthCm: 75, servingsMin: 50, servingsMax: 55, priceFrom: 6000 },
+  { id: "table-13x100", widthCm: 13, lengthCm: 100, servingsMin: 60, servingsMax: 70, priceFrom: 7500 },
+  { id: "table-15x40", widthCm: 15, lengthCm: 40, servingsMin: 40, servingsMax: 50, priceFrom: 3500 },
+  { id: "table-15x80", widthCm: 15, lengthCm: 80, servingsMin: 80, servingsMax: 80, priceFrom: 8000 },
+  { id: "table-15x100", widthCm: 15, lengthCm: 100, servingsMin: 100, servingsMax: 100, priceFrom: 10000 },
+  { id: "table-15x120", widthCm: 15, lengthCm: 120, servingsMin: 120, servingsMax: 120, priceFrom: 12000 },
+  { id: "table-15x160", widthCm: 15, lengthCm: 160, servingsMin: 140, servingsMax: 160, priceFrom: 16000 },
+  { id: "table-18x36", widthCm: 18, lengthCm: 36, servingsMin: 30, servingsMax: 50, priceFrom: 4000 },
+  { id: "table-18x54", widthCm: 18, lengthCm: 54, servingsMin: 50, servingsMax: 70, priceFrom: 6000 },
+  { id: "table-18x72", widthCm: 18, lengthCm: 72, servingsMin: 70, servingsMax: 90, priceFrom: 8000 },
+  { id: "table-18x90", widthCm: 18, lengthCm: 90, servingsMin: 90, servingsMax: 110, priceFrom: 11000 },
+  { id: "table-18x110", widthCm: 18, lengthCm: 110, servingsMin: 110, servingsMax: 130, priceFrom: 13500 },
+  { id: "table-18x120", widthCm: 18, lengthCm: 120, servingsMin: 130, servingsMax: 150, priceFrom: 15000 },
+  { id: "table-30x40", widthCm: 30, lengthCm: 40, servingsMin: 60, servingsMax: 60, priceFrom: 4000 },
+  { id: "table-30x80", widthCm: 30, lengthCm: 80, servingsMin: 100, servingsMax: 110, priceFrom: 8500 },
+  // TODO(client): the source said "1.2cm length" — read as 1.2m.
+  { id: "table-30x120", widthCm: 30, lengthCm: 120, servingsMin: 150, servingsMax: 150, priceFrom: 15000 },
+  // TODO(client): no servings given, and the price was marked "R20 000*" — confirm both.
+  { id: "table-30x160", widthCm: 30, lengthCm: 160, priceFrom: 20000 },
+];
+
+export const tableCakeWidths = [...new Set(tableCakeSizes.map((s) => s.widthCm))];
+
+export function formatLengthCm(cm: number): string {
+  return cm >= 100 ? `${cm / 100}m` : `${cm}cm`;
+}
+
+export function tableServingsLabel(s: TableCakeSize): string | undefined {
+  if (!s.servingsMin) return undefined;
+  return s.servingsMax && s.servingsMax !== s.servingsMin ? `${s.servingsMin}–${s.servingsMax}` : `${s.servingsMin}`;
+}
+
+// Client-supplied 2026-10-24. TODO(client): the brief's "Topped" line was cut off — topped with what?
+export const italianCake = {
+  label: "Italian style cake",
+  sizeCm: 50,
+  layersNote: "2 layers",
+  servingsMin: 70,
+  servingsMax: 80,
+  priceFrom: 6500,
+  recommendation: "Vanilla Bean with Swiss meringue filling",
+};
+
+export const cakeKinds = ["tiered", "table", "italian"] as const;
+export type CakeKind = (typeof cakeKinds)[number];
+
+/** Ledger-ready description of a non-tiered cake (table or Italian) — undefined when not enough
+ * has been picked yet. Tiered cakes are described from SizeOption by lib/ledger.ts. */
+export function describeSpecialCake(
+  kind: unknown,
+  tableSizeId: string | null | undefined
+): { label: string; detail: string; priceFrom: number } | undefined {
+  if (kind === "italian") {
+    return {
+      label: italianCake.label,
+      detail: `${italianCake.sizeCm}cm, ${italianCake.layersNote} — ${italianCake.servingsMin}–${italianCake.servingsMax} servings`,
+      priceFrom: italianCake.priceFrom,
+    };
+  }
+  if (kind === "table") {
+    const s = tableCakeSizes.find((t) => t.id === tableSizeId);
+    if (!s) return undefined;
+    const servings = tableServingsLabel(s);
+    return {
+      label: "Rectangle table cake",
+      detail: `${s.widthCm}cm × ${formatLengthCm(s.lengthCm)}${servings ? ` — ${servings} servings` : ""}`,
+      priceFrom: s.priceFrom,
+    };
+  }
+  return undefined;
+}
+
+/** "Rectangle table cake — 13cm × 50cm — 30–35 servings", for the baker's email and order page. */
+export function specialCakeText(kind: unknown, tableSizeId: string | null | undefined): string | undefined {
+  const s = describeSpecialCake(kind, tableSizeId);
+  return s ? `${s.label} — ${s.detail}` : undefined;
+}

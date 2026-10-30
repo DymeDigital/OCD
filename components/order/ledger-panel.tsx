@@ -22,12 +22,26 @@ export function LedgerPanel({ ledger, className = "" }: { ledger: Ledger; classN
       ) : (
         <div className="mt-4 divide-y divide-rule">
           {ledger.lines.map((line, i) => (
-            <div key={`${line.label}-${i}`} className="flex items-baseline justify-between gap-4 py-3">
-              <div>
-                <p className="text-sm">{line.label}</p>
-                {line.detail && <p className="text-xs text-ink-soft">{line.detail}</p>}
+            <div key={`${line.label}-${i}`} className="py-3">
+              <div className="flex items-baseline justify-between gap-4">
+                <div>
+                  <p className="text-sm">{line.label}</p>
+                  {line.detail && <p className="text-xs text-ink-soft">{line.detail}</p>}
+                </div>
+                <p className="font-mono whitespace-nowrap text-sm">{formatPriceFrom(line.amount)}</p>
               </div>
-              <p className="font-mono whitespace-nowrap text-sm">{formatPriceFrom(line.amount)}</p>
+              {/* Sub-entries (flavour per tier, top first / per dozen) — indented under a hairline,
+                  unpriced, since they break down the line above rather than add to it. */}
+              {line.sub && (
+                <dl className="mt-2 space-y-1 border-l border-ink pl-3">
+                  {line.sub.map((s, j) => (
+                    <div key={`${s.label}-${j}`} className="text-xs">
+                      <dt className="text-ink-soft">{s.label}</dt>
+                      <dd>{s.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
             </div>
           ))}
         </div>

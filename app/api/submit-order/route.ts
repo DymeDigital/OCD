@@ -14,6 +14,7 @@ import { generateOrderToken, saveOrder, savePhoto, type StoredOrder } from "@/li
 import { buildOrderTemplatePayload, sendOrderTemplate } from "@/lib/whatsapp";
 import { buildOrderEmail, sendOrderEmail, type EmailPhoto } from "@/lib/email";
 import { socialLinks } from "@/content/data/socialLinks";
+import { confections, confectionNeedsImage, MAX_CONFECTION_IMAGES } from "@/content/data/confections";
 
 declare global {
   interface CloudflareEnv {
@@ -116,17 +117,44 @@ export async function POST(request: Request) {
     }
   }
 
+  // Per-item reference photos (content/data/confections.ts's referenceImage — cake pops, cakesicles,
+  // sugar cookies, bespoke macarons), sent as repeated "confectionFiles:<id>" entries. Each one
+  // stored is labelled with the item it belongs to. Photos for items that don't need one are ignored.
+  const confectionUploads: { file: File; label: string }[] = [];
+  for (const sel of validated.data.confections ?? []) {
+    if (!confectionNeedsImage(sel)) continue;
+    const name = confections.find((c) => c.id === sel.confectionId)?.name ?? sel.confectionId;
+    const itemFiles = formData
+      .getAll(`confectionFiles:${sel.confectionId}`)
+      .filter((f): f is File => f instanceof File);
+    if (itemFiles.length === 0) {
+      return NextResponse.json({ error: `A reference photo is needed for ${name}.` }, { status: 400 });
+    }
+    if (itemFiles.length > MAX_CONFECTION_IMAGES) {
+      return NextResponse.json({ error: `Too many photos for ${name} — max ${MAX_CONFECTION_IMAGES}.` }, { status: 400 });
+    }
+    for (const file of itemFiles) {
+      if (file.size > MAX_SIZE_BYTES || !ACCEPTED_TYPES.includes(file.type)) {
+        return NextResponse.json({ error: `${file.name} is too large or not an accepted image type.` }, { status: 400 });
+      }
+      confectionUploads.push({ file, label: name });
+    }
+  }
+  // Index-aligned with referenceImages below and the email's inline photos.
+  const allFiles = [...files, ...confectionUploads.map((u) => u.file)];
+  const labels = [...files.map(() => undefined), ...confectionUploads.map((u) => u.label)];
+
   // Read the reference photos into base64 for the email now, while they're still plain `File`s —
   // reading arrayBuffer() doesn't consume a File/Blob, so the same `files` still flow into
   // savePhoto() below unchanged. Only attempt this under a size budget well below Resend's 40MB
   // (post-base64) attachment cap; buildOrderEmail() falls back to a plain "too large" note
   // otherwise rather than let a big order fail to send at all.
   let emailPhotos: EmailPhoto[] | undefined;
-  const totalFileBytes = files.reduce((sum, f) => sum + f.size, 0);
-  if (files.length > 0 && totalFileBytes <= MAX_INLINE_EMAIL_ATTACHMENT_BYTES) {
+  const totalFileBytes = allFiles.reduce((sum, f) => sum + f.size, 0);
+  if (allFiles.length > 0 && totalFileBytes <= MAX_INLINE_EMAIL_ATTACHMENT_BYTES) {
     try {
       emailPhotos = await Promise.all(
-        files.map(async (file) => ({
+        allFiles.map(async (file) => ({
           filename: file.name,
           content: Buffer.from(await file.arrayBuffer()).toString("base64"),
           contentType: file.type || "application/octet-stream",
@@ -142,7 +170,12 @@ export async function POST(request: Request) {
 
   let referenceImages;
   try {
-    referenceImages = await Promise.all(files.map((file) => savePhoto(token, file)));
+    referenceImages = await Promise.all(
+      allFiles.map(async (file, i) => {
+        const saved = await savePhoto(token, file);
+        return labels[i] ? { ...saved, label: labels[i] } : saved;
+      })
+    );
   } catch (err) {
     console.error("[submit-order] photo upload failed", err);
     return NextResponse.json({ error: "Could not upload reference images." }, { status: 502 });

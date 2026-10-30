@@ -17,8 +17,20 @@ export type Flavour = {
   // The customer picks which sponge this flavour is built on: Vanilla Bean or Belgian Chocolate.
   // Client-confirmed for Cookies & Cream 2026-09-30, Salted Caramel 2026-10-02. Required once the
   // flavour is chosen.
-  spongeChoices?: { id: string; label: string }[];
+  spongeChoices?: { id: string; label: string; surchargePct: number }[];
+  // Client-confirmed 2026-10-24: a percentage added to the CAKE price for this flavour (cakes only —
+  // cupcakes keep their per-dozen price). Stacks with the sponge's and the filling's own
+  // percentages; see lib/flavour-pricing.ts.
+  surchargePct: number;
+  // For flavours with hasFillingChoice: which fillings.ts entry "our usual" is, so keeping the
+  // usual filling carries that filling's percentage.
+  usualFillingId?: string;
 };
+
+/** "Red Velvet (+10%)" — the percentage only when there is one. */
+export function withSurcharge(label: string, pct: number | undefined): string {
+  return pct ? `${label} (+${pct}%)` : label;
+}
 
 export function spongeLabel(flavourId: string, spongeId: string | undefined): string | undefined {
   if (!spongeId) return undefined;
@@ -47,6 +59,7 @@ export function flavourCardDescription(flavour: Flavour, eggless: boolean): stri
 export const flavours: Flavour[] = [
   {
     id: "belgian-chocolate",
+    surchargePct: 10,
     name: "Belgian Chocolate",
     filling: "Chocolate Ganache Filling",
     description:
@@ -54,9 +67,11 @@ export const flavours: Flavour[] = [
     category: "both",
     mostRequested: true,
     hasFillingChoice: true,
+    usualFillingId: "belgian-chocolate-ganache",
   },
   {
     id: "vanilla-bean-caramel",
+    surchargePct: 0,
     name: "Vanilla Bean",
     filling: "Caramel Ganache Filling",
     description:
@@ -64,9 +79,11 @@ export const flavours: Flavour[] = [
     category: "both",
     mostRequested: true,
     hasFillingChoice: true,
+    usualFillingId: "caramel-ganache",
   },
   {
     id: "salted-caramel",
+    surchargePct: 0,
     name: "Salted Caramel",
     filling: "Signature Salted Caramel Filling",
     description:
@@ -74,12 +91,13 @@ export const flavours: Flavour[] = [
     category: "both",
     mostRequested: false,
     spongeChoices: [
-      { id: "vanilla-bean", label: "Vanilla Bean sponge" },
-      { id: "belgian-chocolate", label: "Belgian Chocolate sponge" },
+      { id: "vanilla-bean", label: "Vanilla Bean sponge", surchargePct: 0 },
+      { id: "belgian-chocolate", label: "Belgian Chocolate sponge", surchargePct: 10 },
     ],
   },
   {
     id: "cookies-and-cream",
+    surchargePct: 5,
     name: "Cookies & Cream",
     filling: "Vanilla Bean or Belgian Chocolate Sponge",
     description:
@@ -87,12 +105,13 @@ export const flavours: Flavour[] = [
     category: "both",
     mostRequested: false,
     spongeChoices: [
-      { id: "vanilla-bean", label: "Vanilla Bean sponge" },
-      { id: "belgian-chocolate", label: "Belgian Chocolate sponge" },
+      { id: "vanilla-bean", label: "Vanilla Bean sponge", surchargePct: 0 },
+      { id: "belgian-chocolate", label: "Belgian Chocolate sponge", surchargePct: 10 },
     ],
   },
   {
     id: "lemon-blueberry",
+    surchargePct: 10,
     name: "Lemon and Blueberry",
     filling: "Cream Cheese Filling",
     description:
@@ -102,6 +121,7 @@ export const flavours: Flavour[] = [
   },
   {
     id: "toasted-nut",
+    surchargePct: 15,
     name: "Toasted Nut",
     filling: "Cream Cheese Filling",
     description:
@@ -111,6 +131,7 @@ export const flavours: Flavour[] = [
   },
   {
     id: "orange-almond-white-chocolate",
+    surchargePct: 10,
     name: "Orange, Almonds",
     filling: "White Chocolate Filling",
     description:
@@ -120,6 +141,7 @@ export const flavours: Flavour[] = [
   },
   {
     id: "roasted-nougat-white-chocolate",
+    surchargePct: 5,
     name: "Roasted Nougat",
     filling: "White Chocolate Filling",
     description:
@@ -129,6 +151,7 @@ export const flavours: Flavour[] = [
   },
   {
     id: "raspberry-white-chocolate",
+    surchargePct: 10,
     name: "Raspberry",
     filling: "White Chocolate Filling",
     description:
@@ -138,6 +161,7 @@ export const flavours: Flavour[] = [
   },
   {
     id: "red-velvet",
+    surchargePct: 10,
     name: "Red Velvet",
     filling: "Cream Cheese Filling",
     description:
@@ -147,6 +171,7 @@ export const flavours: Flavour[] = [
   },
   {
     id: "spiced-carrot",
+    surchargePct: 20,
     name: "Spiced Carrot Cake",
     filling: "Pecan & Walnuts and Cream Cheese Filling",
     description:
@@ -156,6 +181,7 @@ export const flavours: Flavour[] = [
   },
   {
     id: "fruit-cake",
+    surchargePct: 25,
     name: "Fruit Cake",
     filling: "Cream Cheese Filling",
     description:
@@ -165,6 +191,7 @@ export const flavours: Flavour[] = [
   },
   {
     id: "matcha",
+    surchargePct: 5,
     name: "Matcha",
     filling: "White Chocolate Ganache Filling",
     description:
@@ -174,6 +201,7 @@ export const flavours: Flavour[] = [
   },
   {
     id: "espresso-biscoff",
+    surchargePct: 10,
     name: "Espresso",
     filling: "White Chocolate and Biscoff Filling",
     description:

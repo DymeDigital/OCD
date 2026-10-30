@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Hero } from "@/components/hero";
 import { SectionA } from "@/components/register-a";
 import { Reveal } from "@/components/reveal";
@@ -7,14 +8,16 @@ import { ButtonLink } from "@/components/button";
 import { ReviewsSection } from "@/components/reviews-section";
 import { flavours } from "@/content/data/flavours";
 import { photos } from "@/content/data/photos";
-import { formatPriceFrom, PRICE_CONFIRM_NOTE } from "@/lib/pricing";
-import { sizes } from "@/content/data/sizes";
 
 // Title/description are inherited from the root layout's default — already locality/keyword-rich
 // (mentions Durban, South Africa and every product line). Only the canonical needs setting here.
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
+
+// Client-requested 2026-10-30: everything below the hero reworked to read more premium — real
+// headings instead of an eyebrow over every section, no ruled lines (Register A, §5), bigger
+// photography, and the two order buttons shown once rather than three times.
 
 const whyOcd = [
   {
@@ -54,19 +57,36 @@ const steps = [
   },
 ];
 
+// One photo per line of work, each leading to its own page. The middle plate sits lower on
+// desktop so the three read as a spread rather than a row of tiles.
+const lines = [
+  {
+    photoId: "60th-birthday-marble-black",
+    title: "Celebration cakes",
+    body: "From a mini cake to six tiers, designed around your occasion.",
+    href: "/cakes",
+    linkLabel: "See celebration cakes",
+  },
+  {
+    photoId: "wedding-peony-gold-monogram",
+    title: "Wedding cakes",
+    body: "Tall, considered and finished by hand for the day itself.",
+    href: "/weddings",
+    linkLabel: "See wedding cakes",
+  },
+  {
+    photoId: "anniversary-rose-cupcakes",
+    title: "Cupcakes & confections",
+    body: "By the dozen, alongside cake pops, cookies, macarons and more.",
+    href: "/cupcakes",
+    linkLabel: "See cupcakes",
+  },
+].map((line) => ({ ...line, photo: photos.find((p) => p.id === line.photoId)! }));
+
 const mostRequested = flavours.filter((f) => f.mostRequested);
-// Curated, not slice(0, 6): the headline promises cakes, wedding cakes and cupcakes, so the grid
-// should show more than birthday cakes. Interleaved so the wedding shots don't clump together.
-const featuredPhotoIds = [
-  "mermaid",
-  "wedding-pearl-two-tier",
-  "birthday-albums",
-  "wedding-ombre-red-roses",
-  "skyline-30th",
-  "wedding-watercolor-blue",
-];
-const featuredPhotos = featuredPhotoIds.map((id) => photos.find((p) => p.id === id)!);
-const startingPrice = Math.min(...sizes.map((s) => s.priceFrom));
+
+const textLink =
+  "font-medium text-ink underline decoration-ink/40 decoration-1 underline-offset-4 transition-colors hover:decoration-ink";
 
 export default function HomePage() {
   return (
@@ -74,34 +94,25 @@ export default function HomePage() {
       <Hero />
 
       <Reveal>
-        <SectionA eyebrow="What we make" className="text-center md:text-left">
-          <h2 className="mx-auto max-w-2xl font-display text-lg font-medium md:mx-0 md:text-2xl">
-            Celebration cakes, wedding cakes, cupcakes, and a full line of signature confections.
-          </h2>
-          <div className="mt-12 grid grid-cols-2 gap-4 md:grid-cols-3">
-            {featuredPhotos.map((photo, i) => (
-              <PhotoPlate key={photo.id} photo={photo} priority={i === 0} />
-            ))}
+        <SectionA>
+          <div className="grid gap-6 md:grid-cols-12 md:items-end md:gap-12">
+            <h2 className="font-display text-xl font-normal md:col-span-7 md:text-2xl">
+              Cakes, cupcakes and confections, made to the millimetre.
+            </h2>
+            <p className="max-w-sm text-ink-soft md:col-span-4 md:col-start-9">
+              Tell us about your occasion and we&apos;ll design around it, then quote you on what you
+              actually need.
+            </p>
           </div>
-          <p className="mx-auto mt-8 max-w-xl text-ink-soft md:mx-0">
-            Chat to us about your design and we&apos;ll give you a quote based on your requirements.
-          </p>
-          <div className="mt-8 flex flex-wrap justify-center gap-4 md:justify-start">
-            <ButtonLink href="/order">Start your cake or cupcake order</ButtonLink>
-            <ButtonLink href="/order/wedding" variant="ghost">
-              Start your wedding order
-            </ButtonLink>
-          </div>
-        </SectionA>
-      </Reveal>
-
-      <Reveal>
-        <SectionA eyebrow="Why OCD?">
-          <div className="grid gap-x-8 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
-            {whyOcd.map((item) => (
-              <div key={item.title}>
-                <h3 className="font-display text-lg font-medium">{item.title}</h3>
-                <p className="mt-2 text-ink-soft">{item.body}</p>
+          <div className="mt-16 grid gap-12 md:mt-20 md:grid-cols-3 md:gap-8">
+            {lines.map((line, i) => (
+              <div key={line.title} className={i === 1 ? "md:mt-20" : undefined}>
+                <PhotoPlate photo={line.photo} priority={i === 0} />
+                <h3 className="mt-6 font-display text-lg font-normal">{line.title}</h3>
+                <p className="mt-2 max-w-xs text-ink-soft">{line.body}</p>
+                <Link href={line.href} className={`mt-4 inline-block ${textLink}`}>
+                  {line.linkLabel}
+                </Link>
               </div>
             ))}
           </div>
@@ -109,53 +120,84 @@ export default function HomePage() {
       </Reveal>
 
       <Reveal>
-        <SectionA eyebrow="How ordering works" className="bg-icing text-center md:text-left">
-          <div className="grid gap-12 md:grid-cols-3">
-            {steps.map((step, i) => (
-              <div key={step.title}>
-                <p className="label text-ink-soft">{String(i + 1).padStart(2, "0")}</p>
-                <h3 className="mt-3 font-display text-xl font-medium">{step.title}</h3>
-                <p className="mt-2 text-ink-soft">{step.body}</p>
+        <SectionA>
+          <div className="grid gap-12 md:grid-cols-12 md:gap-12">
+            <div className="md:col-span-5">
+              <div className="md:sticky md:top-32">
+                <h2 className="font-display text-xl font-normal md:text-2xl">Fussy about every detail.</h2>
+                <p className="mt-4 max-w-sm text-ink-soft">
+                  It&apos;s in the name. Here&apos;s what that means for your cake.
+                </p>
               </div>
-            ))}
-          </div>
-          <div className="mt-12 flex flex-wrap justify-center gap-4 md:justify-start">
-            <ButtonLink href="/order">Start your cake or cupcake order</ButtonLink>
-            <ButtonLink href="/order/wedding" variant="ghost">
-              Start your wedding order
-            </ButtonLink>
+            </div>
+            <div className="space-y-12 md:col-span-6 md:col-start-7">
+              {whyOcd.map((item) => (
+                <div key={item.title}>
+                  <h3 className="font-display text-lg font-normal">{item.title}</h3>
+                  <p className="mt-2 max-w-md text-ink-soft">{item.body}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </SectionA>
       </Reveal>
 
       <Reveal>
-        <SectionA eyebrow="Most requested">
-          <h2 className="max-w-2xl font-display text-2xl font-medium">A few favourites to start from.</h2>
-          <div className="mt-12 grid gap-8 md:grid-cols-2">
+        {/* Full-bleed icing band — the one tinted section, so the steps read as their own moment. */}
+        <div className="bg-icing">
+          <SectionA>
+            <h2 className="max-w-xl font-display text-xl font-normal md:text-2xl">Ordering takes one sitting.</h2>
+            <ol className="mt-16 grid gap-12 md:grid-cols-3 md:gap-10">
+              {steps.map((step, i) => (
+                <li key={step.title}>
+                  <p className="font-display text-3xl font-light leading-none text-ink" aria-hidden>
+                    {i + 1}
+                  </p>
+                  <h3 className="mt-6 font-display text-lg font-normal">{step.title}</h3>
+                  <p className="mt-2 max-w-xs text-ink-soft">{step.body}</p>
+                </li>
+              ))}
+            </ol>
+            <div className="mt-16 flex flex-wrap gap-4">
+              <ButtonLink href="/order">Start your cake or cupcake order</ButtonLink>
+              <ButtonLink href="/order/wedding" variant="ghost">
+                Start your wedding order
+              </ButtonLink>
+            </div>
+          </SectionA>
+        </div>
+      </Reveal>
+
+      <Reveal>
+        <SectionA>
+          <div className="flex flex-wrap items-end justify-between gap-6">
+            <h2 className="max-w-xl font-display text-xl font-normal md:text-2xl">Our most requested flavours.</h2>
+            <Link href="/cakes" className={textLink}>
+              See all 14 flavours
+            </Link>
+          </div>
+          <div className="mt-16 grid gap-x-16 gap-y-12 md:grid-cols-2">
             {mostRequested.map((flavour) => (
-              <div key={flavour.id} className="border-b border-rule pb-8">
-                <h3 className="font-display text-lg font-medium">{flavour.name}</h3>
-                <p className="text-sm text-ink-soft">{flavour.filling}</p>
-                <p className="mt-2 text-ink-soft">{flavour.description}</p>
+              <div key={flavour.id}>
+                <h3 className="font-display text-lg font-normal">{flavour.name}</h3>
+                <p className="mt-1 font-display text-sm italic text-ink-soft">{flavour.filling}</p>
+                <p className="mt-3 max-w-md text-ink-soft">{flavour.description}</p>
               </div>
             ))}
-          </div>
-          <div className="mt-12">
-            <ButtonLink href="/cakes">See all 14 flavours</ButtonLink>
           </div>
         </SectionA>
       </Reveal>
 
       <Reveal>
-        <ReviewsSection className="bg-icing" />
+        <ReviewsSection />
       </Reveal>
 
       <Reveal>
         <SectionA className="text-center">
-          <h2 className="mx-auto max-w-xl font-display text-2xl font-medium">
+          <h2 className="mx-auto max-w-3xl font-display text-xl font-normal md:text-2xl lg:text-3xl">
             Nothing&apos;s locked in yet — we&apos;ll confirm everything with you first.
           </h2>
-          <div className="mt-8 flex justify-center">
+          <div className="mt-10 flex justify-center">
             <ButtonLink href="/order">Start your order</ButtonLink>
           </div>
         </SectionA>

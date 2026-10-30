@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { MAX_FILES, MAX_SIZE_BYTES, ACCEPT_ATTR } from "@/lib/upload-constraints";
+import { fieldLabelClass } from "@/components/order/fields";
 
 // §9 step 6: shows thumbnails and filenames in the ledger. Files aren't persisted to the
 // localStorage autosave (not JSON-serialisable) — on submit they travel to /api/submit-order
@@ -20,16 +21,24 @@ export function ImageUpload({
   files,
   onChange,
   requiredError,
+  id = IMAGE_UPLOAD_ID,
+  label = "Reference images",
+  hint,
+  max = MAX_FILES,
 }: {
   files: File[];
   onChange: (files: File[]) => void;
   // Set by the form when Continue/submit is blocked because no image was added.
   requiredError?: string;
+  // Overrides for a second, item-specific upload (components/order/confections-picker.tsx).
+  id?: string;
+  label?: string;
+  hint?: string;
+  max?: number;
 }) {
   const [error, setError] = useState<string | null>(null);
   const shownError = error ?? requiredError;
-  const errorId = `${IMAGE_UPLOAD_ID}-error`;
-
+  const errorId = `${id}-error`;
 
   function handleFiles(list: FileList | null) {
     if (!list || list.length === 0) return;
@@ -39,9 +48,9 @@ export function ImageUpload({
       setError(`${tooBig.name} is over 10MB — try a smaller file.`);
       return;
     }
-    const room = Math.max(0, MAX_FILES - files.length);
+    const room = Math.max(0, max - files.length);
     if (incoming.length > room) {
-      setError(`We can only take ${MAX_FILES} images here — added the first ${room}.`);
+      setError(`We can only take ${max} images here — added the first ${room}.`);
     } else {
       setError(null);
     }
@@ -54,18 +63,18 @@ export function ImageUpload({
   }
 
   return (
-    <div id={IMAGE_UPLOAD_ID} className="scroll-mt-24">
-      <span className="label text-ink-soft">
-        Reference images
+    <div id={id} className="scroll-mt-24">
+      <span className={fieldLabelClass}>
+        {label}
         <span className="text-red-ink" aria-hidden>
           {" "}
           *
         </span>
       </span>
       <p className="mt-1 text-sm text-ink-soft">
-        At least one, so we can see what you have in mind. Up to {MAX_FILES} images, 10MB each — JPG, PNG or HEIC.
+        {hint ?? "At least one, so we can see what you have in mind."} Up to {max} image{max > 1 ? "s" : ""}, 10MB each — JPG, PNG or HEIC.
       </p>
-      <label className="mt-3 block cursor-pointer rounded-[4px] border border-dashed border-rule p-6 text-center text-sm text-ink-soft transition-colors hover:border-ink">
+      <label className="mt-3 block cursor-pointer rounded-[4px] border-2 border-dashed border-ink-soft bg-icing p-6 text-center text-sm font-medium text-ink transition-colors hover:border-ink has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-red-ink">
         Click to choose images, or drag them here
         <input
           type="file"

@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { UseFormRegisterReturn } from "react-hook-form";
+import { fieldBoxClass, fieldLabelClass, checkboxClass } from "@/components/order/fields";
 import {
   standardContractSections,
   standardAcknowledgement,
@@ -64,7 +65,7 @@ export function TermsStep({
         </p>
       </div>
 
-      <div className="max-h-[420px] overflow-y-auto rounded-[4px] border border-rule p-6 md:p-8">
+      <div className="max-h-[420px] overflow-y-auto rounded-[4px] border border-ink-soft p-6 md:p-8">
         <div className="divide-y divide-rule">
           {sections.map((section, i) => (
             <div key={section.title} className={i === 0 ? "pb-6" : "py-6"}>
@@ -104,7 +105,7 @@ export function TermsStep({
 
       <div className="border-t border-rule pt-8">
         <label className="block">
-          <span className="label text-ink-soft">
+          <span className={fieldLabelClass}>
             Type your full name to sign
             <span className="text-red-ink" aria-hidden>
               {" "}
@@ -115,7 +116,7 @@ export function TermsStep({
             type="text"
             {...signatureNameRegister}
             aria-invalid={!!signatureNameError}
-            className="mt-2 w-full border-0 border-b border-rule bg-transparent py-2 text-ink focus:border-b-2 focus:border-ink focus:outline-none"
+            className={`mt-2 ${fieldBoxClass}`}
             placeholder="Full legal name"
           />
           {signatureNameError && (
@@ -132,11 +133,11 @@ export function TermsStep({
           <p className="whitespace-nowrap text-sm text-ink-soft">Signed {todayZA()}</p>
         </div>
 
-        <label className="mt-6 flex items-start gap-3">
+        <label className="mt-6 flex cursor-pointer items-start gap-3 rounded-[4px] border border-ink-soft bg-paper p-4 transition-colors hover:border-ink has-[:checked]:border-ink has-[:checked]:bg-icing has-[:checked]:ring-1 has-[:checked]:ring-inset has-[:checked]:ring-ink">
           <input
             type="checkbox"
             {...agreedToTermsRegister}
-            className="mt-1 h-4 w-4 shrink-0 rounded-[2px] border border-rule accent-ink"
+            className={`mt-0.5 ${checkboxClass}`}
           />
           <span>
             I&apos;ve read and agree to the terms above.

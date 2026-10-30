@@ -3,8 +3,12 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   images: {
     // Reference photos uploaded on the order forms (CLAUDE.md §9) live in the ORDER_PHOTOS R2
-    // bucket and are served from its public r2.dev URL — see lib/order-store.ts.
-    remotePatterns: [{ protocol: "https", hostname: "*.r2.dev" }],
+    // bucket and are served from its public URL (ORDER_PHOTOS_PUBLIC_URL) — see lib/order-store.ts.
+    // Production uses the custom domain; r2.dev kept for older orders and local setups.
+    remotePatterns: [
+      { protocol: "https", hostname: "photos.obsessivecupcakedisorder.co.za" },
+      { protocol: "https", hostname: "*.r2.dev" },
+    ],
   },
 };
 

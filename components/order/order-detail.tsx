@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import type { StoredOrder } from "@/lib/order-store";
 import { formatDateZA, collectionWindowLabel } from "@/lib/order-summary";
 import { flavourLabel } from "@/lib/ledger";
+import { tierRows, dozenRows } from "@/lib/flavour-picks";
+import { specialCakeText } from "@/content/data/sizes";
 import { LedgerPanel } from "@/components/order/ledger-panel";
 import { LedgerRow } from "@/components/register-b";
 import { designTiers } from "@/content/data/designTiers";
@@ -40,10 +42,19 @@ function StandardFields({ data }: { data: OrderFormValues }) {
       <Row label="Date needed" value={data.eventDate && formatDateZA(data.eventDate)} />
       <Row label="Making" value={data.productType} />
       <Row label="Guest count" value={data.guestCount} />
+      <Row label="Cake type" value={specialCakeText(data.cakeKind, data.tableSizeId)} />
       <Row label="Cake shape" value={str(data.cakeShape)} />
-      <Row label="Cake flavour" value={data.cakeFlavourId && flavourLabel(data.cakeFlavourId, data.cakeFlavourFillings, data.cakeFlavourSponges)} />
+      {data.cakeTiers && data.cakeTiers.length > 1 ? (
+        tierRows(data.cakeTiers).map((r) => <Row key={r.label} label={r.label} value={r.value} />)
+      ) : (
+        <Row label="Cake flavour" value={data.cakeFlavourId && flavourLabel(data.cakeFlavourId, data.cakeFlavourFillings, data.cakeFlavourSponges)} />
+      )}
       <Row label="Cupcake dozens" value={data.cupcakeDozens} />
-      <Row label="Cupcake flavour" value={data.cupcakeFlavourId && flavourLabel(data.cupcakeFlavourId, data.cupcakeFlavourFillings, data.cupcakeFlavourSponges)} />
+      {data.cupcakeMixFlavours ? (
+        dozenRows(data.cupcakeDozenFlavours, data.cupcakeDozens).map((r, i) => <Row key={i} label={`Cupcakes, ${r.label}`} value={r.value} />)
+      ) : (
+        <Row label="Cupcake flavour" value={data.cupcakeFlavourId && flavourLabel(data.cupcakeFlavourId, data.cupcakeFlavourFillings, data.cupcakeFlavourSponges)} />
+      )}
       <Row label="Cake dietary" value={data.cakeDietaryOptions?.join(", ")} />
       <Row label="Cupcake dietary" value={data.cupcakeDietaryOptions?.join(", ")} />
       <Row
@@ -64,12 +75,30 @@ function WeddingFields({ data }: { data: WeddingOrderFormValues }) {
       <Row label="Wedding date" value={data.weddingDate && formatDateZA(data.weddingDate)} />
       <Row label="Time" value={data.weddingTime} />
       <Row label="Guest count" value={data.guestCount} />
-      <Row
-        label="Tiers"
-        value={data.tierCount ? `${data.tierCount}${data.fauxTierCount ? ` (${data.fauxTierCount} faux)` : ""}` : undefined}
-      />
-      <Row label="Flavour(s)" value={data.perTierFlavourIds?.map((id) => flavourLabel(id, data.flavourFillings, data.flavourSponges)).join(", ")} />
+      <Row label="Cake type" value={specialCakeText(data.cakeKind, data.tableSizeId)} />
+      {data.tiers?.length ? (
+        <>
+          <Row label="Tiers" value={data.tiers.length} />
+          {tierRows(data.tiers).map((r) => (
+            <Row key={r.label} label={r.label} value={r.value} />
+          ))}
+        </>
+      ) : (
+        // Orders saved before the per-tier sheet (2026-10-24).
+        <>
+          <Row
+            label="Tiers"
+            value={data.tierCount ? `${data.tierCount}${data.fauxTierCount ? ` (${data.fauxTierCount} faux)` : ""}` : undefined}
+          />
+          <Row label="Flavour(s)" value={data.perTierFlavourIds?.map((id) => flavourLabel(id, data.flavourFillings, data.flavourSponges)).join(", ")} />
+        </>
+      )}
       <Row label="Dietary" value={data.dietaryOptions?.join(", ")} />
+      <Row label="Cupcake dozens" value={data.cupcakeDozens} />
+      {!!data.cupcakeDozens &&
+        dozenRows(data.cupcakeDozenFlavours, data.cupcakeDozens).map((r, i) => (
+          <Row key={i} label={`Cupcakes, ${r.label}`} value={r.value} />
+        ))}
       <Row label="Cake table setup" value={data.cakeTableSetup} />
       <Row label="Tasting wanted" value={data.tastingWanted ? "Yes" : "No"} />
       <Row
@@ -146,15 +175,19 @@ export function OrderDetail({ order }: { order: StoredOrder }) {
           <p className="label mb-3 text-ink-soft">Reference photos</p>
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
             {order.referenceImages.map((img) => (
-              <div key={img.url} className="relative aspect-square overflow-hidden rounded-[4px] bg-icing">
-                <Image
-                  src={img.url}
-                  alt={img.name}
-                  fill
-                  className="object-cover"
-                  sizes="(min-width: 640px) 33vw, 50vw"
-                />
-              </div>
+              <figure key={img.url}>
+                <div className="relative aspect-square overflow-hidden rounded-[4px] bg-icing">
+                  <Image
+                    src={img.url}
+                    alt={img.label ? `${img.label} — ${img.name}` : img.name}
+                    fill
+                    className="object-cover"
+                    sizes="(min-width: 640px) 33vw, 50vw"
+                  />
+                </div>
+                {/* Photos for one item (e.g. cake pops) say which; the cake's own don't. */}
+                {img.label && <figcaption className="mt-1.5 text-sm text-ink-soft">{img.label}</figcaption>}
+              </figure>
             ))}
           </div>
         </div>

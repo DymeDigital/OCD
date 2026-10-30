@@ -16,11 +16,15 @@ export type Confection = {
   isFromPrice: boolean; // true = "From RX", false = flat "RX"
   subOptions?: { label: string; note?: string }[];
   sourceNote?: string; // TODO(client) discrepancy flags
+  // Client-requested 2026-10-24: these need their own reference photo — always, or only for one
+  // sub-option (bespoke macarons). See confectionNeedsImage below.
+  referenceImage?: { subOption?: string };
 };
 
 export const confections: Confection[] = [
   {
     id: "cake-pops",
+    referenceImage: {},
     name: "Chocolate Cake Pops",
     description:
       "Moist chocolate cake crumbs gently bound, rolled into bite-sized pops and dipped in a crisp white chocolate coating.",
@@ -30,6 +34,7 @@ export const confections: Confection[] = [
   },
   {
     id: "cakesicles",
+    referenceImage: {},
     name: "Chocolate Cakesicles",
     description:
       "Decadent, moist chocolate cake — no frosting added — shaped into elegant popsicle-style bars and coated in a crisp layer of creamy white chocolate.",
@@ -39,6 +44,7 @@ export const confections: Confection[] = [
   },
   {
     id: "macarons",
+    referenceImage: { subOption: "Bespoke — from R500" },
     name: "French Macarons",
     description:
       "Delicate almond meringue shells with a crisp exterior and soft, chewy centre, filled with rich, velvety ganache. One colour per set.",
@@ -54,6 +60,7 @@ export const confections: Confection[] = [
   },
   {
     id: "sugar-cookies",
+    referenceImage: {},
     name: "Decorated Sugar Cookies",
     description:
       "Buttery, soft sugar cookies with a hint of vanilla, hand-decorated with royal icing to match any theme or occasion.",
@@ -150,3 +157,14 @@ export const cupcakeBase = {
   unit: "dozen",
   priceFrom: 450,
 };
+
+// Per-item reference photos (separate from the cake's own): up to this many per confection.
+export const MAX_CONFECTION_IMAGES = 3;
+
+/** Whether this selection needs its own reference photo — e.g. cake pops always, macarons only
+ * when the bespoke option is picked. */
+export function confectionNeedsImage(sel: { confectionId: string; note?: string | null }): boolean {
+  const ref = confections.find((c) => c.id === sel.confectionId)?.referenceImage;
+  if (!ref) return false;
+  return !ref.subOption || sel.note === ref.subOption;
+}

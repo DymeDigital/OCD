@@ -8,7 +8,15 @@ import {
   formatDateZA,
 } from "@/lib/order-summary";
 import { flavourLabel } from "@/lib/ledger";
+import { tierRows, dozenRows } from "@/lib/flavour-picks";
+import { specialCakeText } from "@/content/data/sizes";
 import { designTiers } from "@/content/data/designTiers";
+import {
+  standardContractSections,
+  standardAcknowledgement,
+  weddingContractSections,
+  weddingAcknowledgement,
+} from "@/content/data/terms";
 import { normalizeSAWhatsAppNumber } from "@/lib/phone";
 import type { OrderFormValues, WeddingOrderFormValues } from "@/lib/schemas";
 import type { ReferenceImage } from "@/lib/upload-schema";
@@ -86,10 +94,15 @@ function standardDetailRows(data: OrderFormValues): string {
     fieldRow("Date needed", data.eventDate && formatDateZA(data.eventDate)),
     fieldRow("Making", data.productType),
     fieldRow("Guest count", data.guestCount),
+    fieldRow("Cake type", specialCakeText(data.cakeKind, data.tableSizeId)),
     fieldRow("Cake shape", str(data.cakeShape)),
-    fieldRow("Cake flavour", data.cakeFlavourId && flavourLabel(data.cakeFlavourId, data.cakeFlavourFillings, data.cakeFlavourSponges)),
+    ...(data.cakeTiers && data.cakeTiers.length > 1
+      ? tierRows(data.cakeTiers).map((r) => fieldRow(r.label, r.value))
+      : [fieldRow("Cake flavour", data.cakeFlavourId && flavourLabel(data.cakeFlavourId, data.cakeFlavourFillings, data.cakeFlavourSponges))]),
     fieldRow("Cupcake dozens", data.cupcakeDozens),
-    fieldRow("Cupcake flavour", data.cupcakeFlavourId && flavourLabel(data.cupcakeFlavourId, data.cupcakeFlavourFillings, data.cupcakeFlavourSponges)),
+    ...(data.cupcakeMixFlavours
+      ? dozenRows(data.cupcakeDozenFlavours, data.cupcakeDozens).map((r) => fieldRow(`Cupcakes, ${r.label}`, r.value))
+      : [fieldRow("Cupcake flavour", data.cupcakeFlavourId && flavourLabel(data.cupcakeFlavourId, data.cupcakeFlavourFillings, data.cupcakeFlavourSponges))]),
     fieldRow("Cake dietary", data.cakeDietaryOptions?.join(", ")),
     fieldRow("Cupcake dietary", data.cupcakeDietaryOptions?.join(", ")),
     fieldRow("Design tier", designTiers.find((t) => t.id === data.designTierId)?.label),
@@ -105,14 +118,22 @@ function weddingDetailRows(data: WeddingOrderFormValues): string {
     fieldRow("Wedding date", data.weddingDate && formatDateZA(data.weddingDate)),
     fieldRow("Time", data.weddingTime),
     fieldRow("Guest count", data.guestCount),
-    fieldRow(
-      "Tiers",
-      data.tierCount
-        ? `${data.tierCount}${data.fauxTierCount ? ` (${data.fauxTierCount} faux)` : ""}`
-        : undefined
-    ),
-    fieldRow("Flavour(s)", data.perTierFlavourIds?.map((id) => flavourLabel(id, data.flavourFillings, data.flavourSponges)).join(", ")),
+    fieldRow("Cake type", specialCakeText(data.cakeKind, data.tableSizeId)),
+    ...(data.tiers?.length
+      ? [fieldRow("Tiers", data.tiers.length), ...tierRows(data.tiers).map((r) => fieldRow(r.label, r.value))]
+      : [
+          // Orders saved before the per-tier sheet (2026-10-24).
+          fieldRow(
+            "Tiers",
+            data.tierCount
+              ? `${data.tierCount}${data.fauxTierCount ? ` (${data.fauxTierCount} faux)` : ""}`
+              : undefined
+          ),
+          fieldRow("Flavour(s)", data.perTierFlavourIds?.map((id) => flavourLabel(id, data.flavourFillings, data.flavourSponges)).join(", ")),
+        ]),
     fieldRow("Dietary", data.dietaryOptions?.join(", ")),
+    fieldRow("Cupcake dozens", data.cupcakeDozens),
+    ...(data.cupcakeDozens ? dozenRows(data.cupcakeDozenFlavours, data.cupcakeDozens).map((r) => fieldRow(`Cupcakes, ${r.label}`, r.value)) : []),
     fieldRow("Cake table setup", data.cakeTableSetup),
     fieldRow("Tasting wanted", data.tastingWanted ? "Yes" : "No"),
     fieldRow(
@@ -157,9 +178,13 @@ function buildPhotos(
           a.filename
         )}" width="96" height="96" style="display:block;width:96px;height:96px;object-fit:cover;border:1px solid #E4E4E4;border-radius:4px">`;
         const url = referenceImages[i]?.url;
-        return url
-          ? `<a href="${esc(url)}" style="display:inline-block;margin:0 8px 8px 0">${img}</a>`
-          : `<div style="display:inline-block;margin:0 8px 8px 0">${img}</div>`;
+        const linked = url ? `<a href="${esc(url)}" style="display:block">${img}</a>` : img;
+        // A photo for one item (e.g. cake pops) is captioned with it; the cake's own aren't.
+        const label = referenceImages[i]?.label;
+        const caption = label
+          ? `<div style="width:96px;font-size:11px;line-height:1.3;color:#6B6B6B;padding-top:4px">${esc(label)}</div>`
+          : "";
+        return `<div style="display:inline-block;vertical-align:top;margin:0 8px 8px 0">${linked}${caption}</div>`;
       })
       .join("");
     return { html, attachments };
@@ -169,7 +194,7 @@ function buildPhotos(
       .map(
         (img) =>
           `<a href="${esc(img.url)}" style="display:block;color:#111111;font-size:14px;padding:2px 0">${esc(
-            img.name
+            img.label ? `${img.label} — ${img.name}` : img.name
           )}</a>`
       )
       .join("");
@@ -184,6 +209,70 @@ function buildPhotos(
   };
 }
 
+// "24/10/2026 at 14:05" in South African time (UTC+2 all year, no daylight saving) — a Worker
+// runs in UTC, so the offset is applied by hand rather than trusting the runtime's locale data.
+function formatSignedAtZA(iso: string): string {
+  const d = new Date(Date.parse(iso) + 2 * 60 * 60 * 1000);
+  if (Number.isNaN(d.getTime())) return iso;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(d.getUTCDate())}/${pad(d.getUTCMonth() + 1)}/${d.getUTCFullYear()} at ${pad(d.getUTCHours())}:${pad(
+    d.getUTCMinutes()
+  )}`;
+}
+
+// Client-requested 2026-10-24: the full terms the customer e-signed, in the order email itself —
+// the same clauses components/order/terms-step.tsx showed them, then the acknowledgement and the
+// typed signature with the date and time it was given.
+function agreementParts(order: StoredOrder) {
+  const sections = order.kind === "standard" ? standardContractSections : weddingContractSections;
+  const intro =
+    order.kind === "standard"
+      ? "By signing below, I confirm that I have read, understood and agree to the terms outlined above, including:"
+      : weddingAcknowledgement;
+  const points = order.kind === "standard" ? standardAcknowledgement : [];
+  const signedLine = `Signed electronically by ${order.signatureName} on ${formatSignedAtZA(order.agreedAt)} (SAST), with "I agree to the terms" ticked.`;
+  return { sections, intro, points, signedLine };
+}
+
+function agreementHtml(order: StoredOrder): string {
+  const { sections, intro, points, signedLine } = agreementParts(order);
+  const clauses = sections
+    .map(
+      (s) =>
+        `<p style="margin:12px 0 4px;font-size:13px;font-weight:600;color:#111111">${esc(s.title)}</p>
+        <ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.5;color:#6B6B6B">${s.bullets
+          .map((b) => `<li>${esc(b)}</li>`)
+          .join("")}</ul>`
+    )
+    .join("");
+  const pointList = points.length
+    ? `<ul style="margin:4px 0 0;padding-left:18px;font-size:13px;color:#111111">${points.map((p) => `<li>${esc(p)}</li>`).join("")}</ul>`
+    : "";
+  return `<table style="width:100%;border-collapse:collapse;border-top:1px solid #E4E4E4;margin-bottom:16px">
+      <tr><td style="padding:12px 0 4px;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;color:#6B6B6B">Signed agreement</td></tr>
+      <tr><td>${clauses}
+        <p style="margin:16px 0 0;font-size:13px;color:#111111">${esc(intro)}</p>${pointList}
+        <p style="margin:16px 0 4px;font-size:20px;font-style:italic;color:#111111;border-bottom:1px solid #111111;padding-bottom:4px">${esc(
+          order.signatureName
+        )}</p>
+        <p style="margin:0;font-size:12px;color:#6B6B6B">${esc(signedLine)}</p>
+      </td></tr>
+    </table>`;
+}
+
+function agreementText(order: StoredOrder): string {
+  const { sections, intro, points, signedLine } = agreementParts(order);
+  return [
+    "SIGNED AGREEMENT",
+    ...sections.flatMap((s) => ["", s.title, ...s.bullets.map((b) => `- ${b}`)]),
+    "",
+    intro,
+    ...points.map((p) => `- ${p}`),
+    "",
+    signedLine,
+  ].join("\n");
+}
+
 export function buildOrderEmail(
   order: StoredOrder,
   opts: { orderUrl: string; photos?: EmailPhoto[] }
@@ -193,7 +282,7 @@ export function buildOrderEmail(
   const subject = `New order — ${name} — ${occasion}`;
 
   // Plain-text part is the same baker-ready summary the wa.me fallback uses, verbatim.
-  const text = buildOrderPlainText(order, opts.orderUrl);
+  const text = `${buildOrderPlainText(order, opts.orderUrl)}\n\n${agreementText(order)}`;
 
   const foundUs = str(order.data.foundUs);
   const whatsappNumber = str(order.data.whatsappNumber);
@@ -292,18 +381,11 @@ export function buildOrderEmail(
     </div>
 
     <table style="width:100%;border-collapse:collapse;border-top:1px solid #E4E4E4;margin-bottom:16px">
-      <tr><td style="padding:12px 0 4px;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;color:#6B6B6B">Signature</td></tr>
-      <tr><td style="padding:0 0 4px;color:#111111;font-style:italic">${esc(
-        order.signatureName
-      )} <span style="font-style:normal;color:#6B6B6B;font-size:12px">— signed ${esc(
-    formatDateZA(order.agreedAt)
-  )}</span></td></tr>
-    </table>
-
-    <table style="width:100%;border-collapse:collapse;border-top:1px solid #E4E4E4">
       <tr><td style="padding:12px 0 8px;font-size:12px;letter-spacing:0.04em;text-transform:uppercase;color:#6B6B6B">Reference photos</td></tr>
       <tr><td>${photosHtml}</td></tr>
     </table>
+
+    ${agreementHtml(order)}
 
     <p style="margin:20px 0 0;font-size:12px;color:#6B6B6B">Nothing is locked in — reply to this email to talk design and confirm the price with the customer.</p>
   </div>

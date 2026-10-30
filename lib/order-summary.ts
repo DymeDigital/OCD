@@ -71,6 +71,7 @@ export function buildOrderPlainText(order: OrderSummaryInput, orderUrl: string |
   if (order.ledger.lines.length > 0) {
     for (const line of order.ledger.lines) {
       lines.push(`- ${line.label}${line.detail ? ` (${line.detail})` : ""}`);
+      for (const s of line.sub ?? []) lines.push(`    ${s.label}: ${s.value}`);
     }
     lines.push("");
   }

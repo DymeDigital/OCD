@@ -7,7 +7,9 @@ const WHATSAPP_NUMBER = "+27 84 973 5638";
 export const socialLinks = {
   whatsappNumber: WHATSAPP_NUMBER,
   whatsappUrl: `https://wa.me/${WHATSAPP_NUMBER.replace(/[^\d]/g, "")}`,
-  email: "darrelrhyce@gmail.com",
+  // Client-requested 2026-10-24: the public address is the shop's own inbox, not a personal one.
+  // Order notifications still go to ORDER_EMAIL_TO (a deploy secret) — see .dev.vars.example.
+  email: "ocdorder@gmail.com",
   instagram: "https://www.instagram.com/obsessivecupcakedisorder_/",
   facebook: "https://www.facebook.com/obsessivecupcakedisorder/",
   tiktok: "https://www.tiktok.com/@obsessivecupcakedisorder",

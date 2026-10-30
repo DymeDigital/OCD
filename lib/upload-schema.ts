@@ -7,6 +7,9 @@ import { MAX_FILES } from "@/lib/upload-constraints";
 export const referenceImageSchema = z.object({
   url: z.string().url(),
   name: z.string(),
+  // Set on a photo that belongs to one item rather than the cake design — e.g. "Chocolate Cake
+  // Pops" for a cake-pop reference (content/data/confections.ts's referenceImage).
+  label: z.string().optional(),
 });
 
 export const referenceImagesSchema = z.array(referenceImageSchema).max(MAX_FILES);

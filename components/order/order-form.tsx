@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { get } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { usePersistedForm, clearPersistedForm } from "@/lib/use-persisted-form";
 import {
@@ -13,23 +14,36 @@ import {
   foundUsOptions,
   spongeRequiredMessage,
   fillingRequiredMessage,
+  tableSizeRequiredMessage,
   type OrderFormValues,
 } from "@/lib/schemas";
 import { computeOrderLedger } from "@/lib/ledger";
 import { formatPriceFrom } from "@/lib/pricing";
 import { standardTerms } from "@/content/data/terms";
-import { flavours, egglessFlavourIds, defaultFillingLabel, flavourCardDescription } from "@/content/data/flavours";
+import { flavours, egglessFlavourIds, defaultFillingLabel, flavourCardDescription, withSurcharge } from "@/content/data/flavours";
+import { fillingSurchargePct } from "@/lib/flavour-pricing";
 import { fillings, egglessFillings, USUAL_FILLING_ID } from "@/content/data/fillings";
 import { designTiers } from "@/content/data/designTiers";
-import { sizesForServings, sizes } from "@/content/data/sizes";
+import { sizesForServings, sizes, resolveCakeSize, italianCake } from "@/content/data/sizes";
+import { CakeKindPicker, TableCakeFields, ItalianCakeNote } from "@/components/order/cake-kind-fields";
+import {
+  MAX_MIXED_DOZENS,
+  tierSheetProblem,
+  dozenSheetProblem,
+  tierPositionLabel,
+  syncTierPicks,
+  syncDozenPicks,
+  egglessPicks,
+} from "@/lib/flavour-picks";
+import { FlavourSheet, TierStack } from "@/components/order/flavour-sheet";
 import { cupcakeStyles } from "@/content/data/cupcake-styles";
 import { collectionWindows } from "@/content/data/collection-windows";
 import { LedgerPanel } from "@/components/order/ledger-panel";
-import { ConfectionsPicker } from "@/components/order/confections-picker";
+import { ConfectionsPicker, useConfectionImages } from "@/components/order/confections-picker";
 import { ImageUpload, imageRequiredMessage, scrollToImageUpload } from "@/components/order/image-upload";
 import { TermsStep } from "@/components/order/terms-step";
 import { SubmitFallback } from "@/components/order/submit-fallback";
-import { TextField, TextAreaField, SelectField, RadioCardGroup, CheckboxCardGroup, FollowUpPanel } from "@/components/order/fields";
+import { TextField, TextAreaField, SelectField, RadioCardGroup, CheckboxCardGroup, FollowUpPanel, fieldBoxClass, checkboxClass } from "@/components/order/fields";
 import { Button } from "@/components/button";
 import { buildOrderPlainText, type OrderSummaryInput } from "@/lib/order-summary";
 
@@ -107,6 +121,7 @@ export function OrderForm() {
   // the form first rendered (submitting in under 3s reads as automated).
   const [honeypot, setHoneypot] = useState("");
   const [mountedAt] = useState(() => Date.now());
+  const confectionImages = useConfectionImages();
   // Tracks the sizeId this component itself last auto-picked, so the effect below can tell "the
   // guest count moved and this value is now stale" apart from "the customer chose this on purpose"
   // — the latter should never be silently overwritten.
@@ -126,6 +141,9 @@ export function OrderForm() {
     cupcakeFlavourFillings: {},
     cakeFlavourSponges: {},
     cupcakeFlavourSponges: {},
+    cakeTiers: [],
+    cupcakeMixFlavours: false,
+    cupcakeDozenFlavours: [],
     agreedToTerms: false,
   } as unknown as OrderFormValues);
 
@@ -216,6 +234,45 @@ export function OrderForm() {
     }
   }, [values.cupcakeStyleId, values.cupcakeStyleVariantId, form]);
 
+  // A multi-tier size gets one flavour row per tier, top first (client-requested 2026-10-24) —
+  // resized whenever the size changes, keeping picks by position. Single-tier cakes keep the
+  // flavour cards, so cakeTiers stays empty for them.
+  // Table and Italian cakes are single cakes with their own sizing (components/order/cake-kind-fields.tsx).
+  const specialKind = values.cakeKind === "table" || values.cakeKind === "italian";
+  useEffect(() => {
+    if (!values.cakeKind) form.setValue("cakeKind", "tiered");
+  }, [values.cakeKind, form]);
+  const cakeSize =
+    values.productType === "cupcakes" || specialKind ? undefined : resolveCakeSize(values.guestCount, values.sizeId);
+  const multiTier = !!cakeSize && cakeSize.tier > 1;
+  useEffect(() => {
+    const next = syncTierPicks(values.cakeTiers, multiTier ? cakeSize!.sizesCm : []);
+    if (next) form.setValue("cakeTiers", next);
+  }, [multiTier, cakeSize, values.cakeTiers, form]);
+
+  // Mixing flavours by the dozen needs at least two dozen, and stops at MAX_MIXED_DOZENS; eggless
+  // only comes in one flavour, so there's nothing to mix.
+  const canMixCupcakes =
+    !!values.cupcakeDozens && values.cupcakeDozens >= 2 && values.cupcakeDozens <= MAX_MIXED_DOZENS && !cupcakeEggless;
+  useEffect(() => {
+    if (values.cupcakeMixFlavours && !canMixCupcakes) form.setValue("cupcakeMixFlavours", false);
+    const next = syncDozenPicks(values.cupcakeDozenFlavours, values.cupcakeMixFlavours ? values.cupcakeDozens ?? 0 : 0);
+    if (next) form.setValue("cupcakeDozenFlavours", next);
+  }, [canMixCupcakes, values.cupcakeMixFlavours, values.cupcakeDozens, values.cupcakeDozenFlavours, form]);
+
+  useEffect(() => {
+    if (!cakeEggless) return;
+    const next = egglessPicks(values.cakeTiers);
+    if (next) form.setValue("cakeTiers", next, { shouldValidate: true });
+  }, [cakeEggless, values.cakeTiers, form]);
+
+  // The per-row bindings FlavourSheet needs — dynamic array paths, so typed as plain strings here.
+  const sheetBindings = {
+    register: (path: string) => form.register(path as never),
+    setValue: (path: string, value: unknown) => form.setValue(path as never, value as never),
+    errorFor: (path: string) => (get(form.formState.errors, path) as { message?: string } | undefined)?.message,
+  };
+
   const stepFields: (keyof OrderFormValues)[][] = [
     ["occasion"],
     ["eventDate"],
@@ -256,6 +313,9 @@ export function OrderForm() {
       if ((values.productType === "cake" || values.productType === "both") && !values.guestCount) {
         fail("guestCount", "Let us know how many guests you're expecting.");
       }
+      if (values.productType !== "cupcakes" && values.cakeKind === "table" && !values.tableSizeId) {
+        fail("tableSizeId", tableSizeRequiredMessage);
+      }
       if ((values.productType === "cupcakes" || values.productType === "both") && !values.cupcakeDozens) {
         fail("cupcakeDozens", "Let us know how many dozen you'd like.");
       }
@@ -265,18 +325,26 @@ export function OrderForm() {
     // schema's refine chain (cakeFlavourId/cupcakeFlavourId/address/collectionWindow) or the
     // field simply having no required rule yet (designTierId).
     if (step === 4) {
-      if ((values.productType === "cake" || values.productType === "both") && !values.cakeFlavourId) {
+      const needsCake = values.productType === "cake" || values.productType === "both";
+      const needsCupcake = values.productType === "cupcakes" || values.productType === "both";
+      if (needsCake && multiTier) {
+        const problem = tierSheetProblem(values.cakeTiers, cakeEggless);
+        if (problem) fail(`cakeTiers.${problem.index}.${problem.field}`, problem.message);
+      } else if (needsCake && !values.cakeFlavourId) {
         fail("cakeFlavourId", "Pick a cake flavour.");
       }
-      if ((values.productType === "cupcakes" || values.productType === "both") && !values.cupcakeFlavourId) {
+      if (needsCupcake && values.cupcakeMixFlavours) {
+        const problem = dozenSheetProblem(values.cupcakeDozenFlavours, cupcakeEggless);
+        if (problem) fail(`cupcakeDozenFlavours.${problem.index}.${problem.field}`, problem.message);
+      } else if (needsCupcake && !values.cupcakeFlavourId) {
         fail("cupcakeFlavourId", "Pick a cupcake flavour.");
       }
       // The follow-up under the chosen flavour: a sponge (Cookies & Cream, Salted Caramel) and/or a filling
       // (Belgian Chocolate, Vanilla Bean) — both required once that flavour is picked.
       form.clearErrors(["cakeFlavourSponges", "cupcakeFlavourSponges", "cakeFlavourFillings", "cupcakeFlavourFillings"]);
       const branches = [
-        { on: values.productType !== "cupcakes", key: "cake", flavourId: values.cakeFlavourId, sponges: values.cakeFlavourSponges, fillings: values.cakeFlavourFillings },
-        { on: values.productType !== "cake", key: "cupcake", flavourId: values.cupcakeFlavourId, sponges: values.cupcakeFlavourSponges, fillings: values.cupcakeFlavourFillings },
+        { on: values.productType !== "cupcakes" && !multiTier, key: "cake", flavourId: values.cakeFlavourId, sponges: values.cakeFlavourSponges, fillings: values.cakeFlavourFillings },
+        { on: values.productType !== "cake" && !values.cupcakeMixFlavours, key: "cupcake", flavourId: values.cupcakeFlavourId, sponges: values.cupcakeFlavourSponges, fillings: values.cupcakeFlavourFillings },
       ] as const;
       for (const b of branches) {
         const flavour = b.on ? flavours.find((f) => f.id === b.flavourId) : undefined;
@@ -306,6 +374,10 @@ export function OrderForm() {
       }
     }
 
+    // Cake pops, cakesicles, sugar cookies and bespoke macarons each need their own photo.
+    const missingConfectionImage = step === 6 ? confectionImages.validate(values.confections) : null;
+    if (missingConfectionImage) valid = false;
+
     if (valid) {
       setStep((s) => Math.min(s + 1, steps.length - 1));
       return;
@@ -315,6 +387,8 @@ export function OrderForm() {
     if (!firstInvalidField) firstInvalidField = fields.find((f) => form.formState.errors[f]);
     if (firstInvalidField) scrollToField(firstInvalidField);
     else if (imagesMissing) scrollToImageUpload();
+    else if (missingConfectionImage)
+      document.getElementById(missingConfectionImage)?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   function goBack() {
@@ -328,6 +402,10 @@ export function OrderForm() {
       setStep(5);
       return;
     }
+    if (confectionImages.validate(data.confections)) {
+      setStep(6);
+      return;
+    }
     const summaryInput: OrderSummaryInput = { token: null, kind: "standard", data, ledger };
 
     const body = new FormData();
@@ -336,6 +414,7 @@ export function OrderForm() {
     body.set("company", honeypot);
     body.set("renderedAt", String(mountedAt));
     files.forEach((file) => body.append("files", file));
+    confectionImages.appendTo(body, data.confections);
 
     try {
       const res = await fetch("/api/submit-order", { method: "POST", body });
@@ -368,6 +447,8 @@ export function OrderForm() {
     if (!flavour || (!flavour.spongeChoices && !flavour.hasFillingChoice)) return null;
     const eggless = branch === "cake" ? cakeEggless : cupcakeEggless;
     const noun = branch === "cake" ? "cake" : "cupcakes";
+    // Flavour percentages apply to cakes only (lib/flavour-pricing.ts).
+    const pct = (label: string, value: number) => (branch === "cake" ? withSurcharge(label, value) : label);
     const spongeField = `${branch}FlavourSponges.${flavour.id}` as const;
     const fillingField = `${branch}FlavourFillings.${flavour.id}` as const;
     type NestedErrors = (Record<string, { message?: string }> & { message?: string }) | undefined;
@@ -383,7 +464,7 @@ export function OrderForm() {
               legend={`Which sponge for your ${flavour.name} ${noun}?`}
               hint="Pick one to continue."
               name={spongeField}
-              options={flavour.spongeChoices.map((s) => ({ value: s.id, label: s.label }))}
+              options={flavour.spongeChoices.map((s) => ({ value: s.id, label: pct(s.label, s.surchargePct) }))}
               register={form.register(spongeField)}
               error={spongeError?.[flavour.id]?.message ?? spongeError?.message}
             />
@@ -398,10 +479,12 @@ export function OrderForm() {
               error={fillingError?.[flavour.id]?.message ?? fillingError?.message}
             >
               <option value="">Select a filling…</option>
-              <option value={USUAL_FILLING_ID}>Our usual — {defaultFillingLabel(flavour, eggless)}</option>
+              <option value={USUAL_FILLING_ID}>
+                {pct(`Our usual — ${defaultFillingLabel(flavour, eggless)}`, fillingSurchargePct(USUAL_FILLING_ID, flavour.id))}
+              </option>
               {(eggless ? egglessFillings : fillings).map((o) => (
                 <option key={o.id} value={o.id}>
-                  {o.label}
+                  {pct(o.label, o.surchargePct)}
                 </option>
               ))}
             </SelectField>
@@ -501,6 +584,31 @@ export function OrderForm() {
                   })}
                   error={form.formState.errors.guestCount?.message}
                 />
+                <div className="mt-8">
+                  <CakeKindPicker register={form.register("cakeKind")} />
+                </div>
+                {values.cakeKind === "table" && (
+                  <div className="mt-6">
+                    <TableCakeFields
+                      widthCm={values.tableWidthCm}
+                      sizeId={values.tableSizeId}
+                      guestCount={values.guestCount}
+                      onWidthChange={(w) => {
+                        form.setValue("tableWidthCm", w);
+                        form.setValue("tableSizeId", "");
+                      }}
+                      onSizeChange={(id) => form.setValue("tableSizeId", id, { shouldValidate: true })}
+                      error={form.formState.errors.tableSizeId?.message}
+                    />
+                  </div>
+                )}
+                {values.cakeKind === "italian" && (
+                  <div className="mt-6">
+                    <ItalianCakeNote />
+                  </div>
+                )}
+                {!specialKind && (
+                <>
                 {values.guestCount && matchedSizes.length === 1 && (
                   <p className="mt-2 text-sm text-ink-soft">
                     That fits a {matchedSizes[0].tierLabel.toLowerCase()} ({matchedSizes[0].sizesCm.join("/")}cm).
@@ -533,7 +641,7 @@ export function OrderForm() {
                       <select
                         value={values.sizeId ?? ""}
                         onChange={(e) => form.setValue("sizeId", e.target.value || undefined, { shouldValidate: true })}
-                        className="mt-3 w-full rounded-[4px] border border-ink bg-paper px-3 py-2.5 text-ink focus:outline-none focus:ring-2 focus:ring-red-ink"
+                        className={`mt-3 ${fieldBoxClass}`}
                       >
                         <option value="">Select…</option>
                         {sizes.map((s) => (
@@ -558,6 +666,8 @@ export function OrderForm() {
                     ))}
                   </SelectField>
                 </div>
+                </>
+                )}
               </div>
             )}
             {(values.productType === "cupcakes" || values.productType === "both") && (
@@ -621,21 +731,52 @@ export function OrderForm() {
                   register={form.register("cakeDietaryOptions")}
                   error={form.formState.errors.cakeDietaryOptions?.message}
                 />
-                <RadioCardGroup
-                  legend="Cake flavour"
-                  name="cakeFlavourId"
-                  options={cakeFlavours.map((f) => ({
-                    value: f.id,
-                    label: f.name,
-                    description: flavourCardDescription(f, cakeEggless),
-                    disabled: cakeEggless && !egglessFlavourIds.includes(f.id),
-                  }))}
-                  register={form.register("cakeFlavourId")}
-                  error={form.formState.errors.cakeFlavourId?.message}
-                  hint={cakeEggless ? "Only Vanilla Bean is eggless — unselect eggless to choose a different flavour." : undefined}
-                  selectedValue={values.cakeFlavourId}
-                  renderAfterSelected={flavourExtras("cake")}
-                />
+                {multiTier ? (
+                  <section className="space-y-4">
+                    <div>
+                      <p className="font-medium text-ink">Flavour per tier</p>
+                      <p className="mt-1 text-sm text-ink-soft">
+                        Your {cakeSize!.sizesCm.join("/")}cm cake has {cakeSize!.tier} tiers. Pick a
+                        flavour for each one, top to bottom — or make one a dummy tier.
+                        {cakeEggless && " Only Vanilla Bean is eggless."}
+                      </p>
+                    </div>
+                    <TierStack tiers={values.cakeTiers ?? []} />
+                    <FlavourSheet
+                      name="cakeTiers"
+                      rows={values.cakeTiers ?? []}
+                      noun="tier"
+                      rowTitle={(i) => tierPositionLabel(i, values.cakeTiers?.length ?? 0)}
+                      rowMeta={(i) => (values.cakeTiers?.[i]?.sizeCm ? `${values.cakeTiers[i].sizeCm}cm` : undefined)}
+                      category="cake"
+                      eggless={cakeEggless}
+                      allowFaux
+                      {...sheetBindings}
+                    />
+                  </section>
+                ) : (
+                  <RadioCardGroup
+                    legend="Cake flavour"
+                    name="cakeFlavourId"
+                    options={cakeFlavours.map((f) => ({
+                      value: f.id,
+                      label: withSurcharge(f.name, f.surchargePct),
+                      description: flavourCardDescription(f, cakeEggless),
+                      disabled: cakeEggless && !egglessFlavourIds.includes(f.id),
+                    }))}
+                    register={form.register("cakeFlavourId")}
+                    error={form.formState.errors.cakeFlavourId?.message}
+                    hint={
+                      cakeEggless
+                        ? "Only Vanilla Bean is eggless — unselect eggless to choose a different flavour."
+                        : values.cakeKind === "italian"
+                          ? `Some flavours add to the cake price — shown as a percentage. We recommend ${italianCake.recommendation}.`
+                          : "Some flavours add to the cake price — shown as a percentage."
+                    }
+                    selectedValue={values.cakeFlavourId}
+                    renderAfterSelected={flavourExtras("cake")}
+                  />
+                )}
               </>
             )}
             {(values.productType === "cupcakes" || values.productType === "both") && (
@@ -649,21 +790,56 @@ export function OrderForm() {
                   register={form.register("cupcakeDietaryOptions")}
                   error={form.formState.errors.cupcakeDietaryOptions?.message}
                 />
-                <RadioCardGroup
-                  legend="Cupcake flavour"
-                  name="cupcakeFlavourId"
-                  options={cupcakeFlavours.map((f) => ({
-                    value: f.id,
-                    label: f.name,
-                    description: flavourCardDescription(f, cupcakeEggless),
-                    disabled: cupcakeEggless && !egglessFlavourIds.includes(f.id),
-                  }))}
-                  register={form.register("cupcakeFlavourId")}
-                  error={form.formState.errors.cupcakeFlavourId?.message}
-                  hint={cupcakeEggless ? "Only Vanilla Bean is eggless — unselect eggless to choose a different flavour." : undefined}
-                  selectedValue={values.cupcakeFlavourId}
-                  renderAfterSelected={flavourExtras("cupcake")}
-                />
+                {canMixCupcakes && (
+                  // Same icing treatment as "Want a bigger or smaller cake?" — an opt-in that changes
+                  // what comes below, so it shouldn't read as just another option card.
+                  <label className="flex cursor-pointer items-start gap-3 rounded-[4px] border border-ink-soft bg-icing p-4 transition-colors hover:border-ink has-[:checked]:border-ink has-[:checked]:ring-1 has-[:checked]:ring-inset has-[:checked]:ring-ink">
+                    <input
+                      type="checkbox"
+                      {...form.register("cupcakeMixFlavours")}
+                      className={`mt-0.5 ${checkboxClass}`}
+                    />
+                    <span>
+                      <span className="block font-medium text-ink">Mix flavours by the dozen</span>
+                      <span className="mt-1 block text-sm text-ink-soft">
+                        Pick a different flavour for each of your {values.cupcakeDozens} dozen.
+                      </span>
+                    </span>
+                  </label>
+                )}
+                {values.cupcakeMixFlavours ? (
+                  <FlavourSheet
+                    name="cupcakeDozenFlavours"
+                    rows={values.cupcakeDozenFlavours ?? []}
+                    noun="dozen"
+                    rowTitle={(i) => `Dozen ${i + 1}`}
+                    category="cupcake"
+                    eggless={cupcakeEggless}
+                    {...sheetBindings}
+                  />
+                ) : (
+                  <RadioCardGroup
+                    legend="Cupcake flavour"
+                    name="cupcakeFlavourId"
+                    options={cupcakeFlavours.map((f) => ({
+                      value: f.id,
+                      label: f.name,
+                      description: flavourCardDescription(f, cupcakeEggless),
+                      disabled: cupcakeEggless && !egglessFlavourIds.includes(f.id),
+                    }))}
+                    register={form.register("cupcakeFlavourId")}
+                    error={form.formState.errors.cupcakeFlavourId?.message}
+                    hint={cupcakeEggless ? "Only Vanilla Bean is eggless — unselect eggless to choose a different flavour." : undefined}
+                    selectedValue={values.cupcakeFlavourId}
+                    renderAfterSelected={flavourExtras("cupcake")}
+                  />
+                )}
+                {!!values.cupcakeDozens && values.cupcakeDozens > MAX_MIXED_DOZENS && (
+                  <p className="text-sm text-ink-soft">
+                    Want a mix across more than {MAX_MIXED_DOZENS} dozen? Pick the main flavour here
+                    and tell us the split in your notes.
+                  </p>
+                )}
               </>
             )}
           </div>
@@ -696,7 +872,14 @@ export function OrderForm() {
           </div>
         )}
 
-        {step === 6 && <ConfectionsPicker form={form} />}
+        {step === 6 && (
+          <ConfectionsPicker
+            form={form}
+            images={confectionImages.images}
+            onImagesChange={confectionImages.onImagesChange}
+            imageErrors={confectionImages.errors}
+          />
+        )}
 
         {step === 7 && (
           <div className="space-y-8">
