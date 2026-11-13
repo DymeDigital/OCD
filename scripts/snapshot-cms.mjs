@@ -10,6 +10,7 @@ import { existsSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const out = fileURLToPath(new URL("../lib/cms/snapshot.generated.json", import.meta.url));
+const wrangler = fileURLToPath(new URL("../node_modules/wrangler/bin/wrangler.js", import.meta.url));
 
 if (process.argv.includes("--ensure")) {
   if (!existsSync(out)) writeFileSync(out, "{}\n");
@@ -19,9 +20,11 @@ if (process.argv.includes("--ensure")) {
 let raw;
 try {
   raw = execFileSync(
-    "npx",
-    ["wrangler", "d1", "execute", "NEXT_TAG_CACHE_D1", "--remote", "--json", "--command", "SELECT key, value FROM cms_content"],
-    { encoding: "utf8", shell: process.platform === "win32", stdio: ["ignore", "pipe", "pipe"] },
+    // Wrangler's own entry point under node, not `npx` — on Windows `npx` needs a shell, and a
+    // shell splits the unquoted SQL into separate arguments.
+    process.execPath,
+    [wrangler, "d1", "execute", "NEXT_TAG_CACHE_D1", "--remote", "--json", "--command", "SELECT key, value FROM cms_content"],
+    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
   );
 } catch (err) {
   const text = `${err.stdout ?? ""}${err.stderr ?? ""}`;
