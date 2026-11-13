@@ -7,7 +7,8 @@ import { PhotoPlate } from "@/components/photo-plate";
 import { ButtonLink } from "@/components/button";
 import { ReviewsSection } from "@/components/reviews-section";
 import { flavours } from "@/content/data/flavours";
-import { photos } from "@/content/data/photos";
+import { photos as defaultPhotos } from "@/content/data/photos";
+import { getContent } from "@/lib/cms/store";
 
 // Title/description are inherited from the root layout's default — already locality/keyword-rich
 // (mentions Durban, South Africa and every product line). Only the canonical needs setting here.
@@ -58,37 +59,43 @@ const steps = [
 ];
 
 // One photo per line of work, each leading to its own page. The middle plate sits lower on
-// desktop so the three read as a spread rather than a row of tiles.
+// desktop so the three read as a spread rather than a row of tiles. Which photo sits on each
+// plate is editable in /admin (homeFeatures); the copy is not.
 const lines = [
   {
-    photoId: "60th-birthday-marble-black",
     title: "Celebration cakes",
     body: "From a mini cake to six tiers, designed around your occasion.",
     href: "/cakes",
     linkLabel: "See celebration cakes",
   },
   {
-    photoId: "wedding-peony-gold-monogram",
     title: "Wedding cakes",
     body: "Tall, considered and finished by hand for the day itself.",
     href: "/weddings",
     linkLabel: "See wedding cakes",
   },
   {
-    photoId: "anniversary-rose-cupcakes",
     title: "Cupcakes & confections",
     body: "By the dozen, alongside cake pops, cookies, macarons and more.",
     href: "/cupcakes",
     linkLabel: "See cupcakes",
   },
-].map((line) => ({ ...line, photo: photos.find((p) => p.id === line.photoId)! }));
+];
 
 const mostRequested = flavours.filter((f) => f.mostRequested);
 
 const textLink =
   "font-medium text-ink underline decoration-ink/40 decoration-1 underline-offset-4 transition-colors hover:decoration-ink";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const [photos, featureIds] = await Promise.all([getContent("photos"), getContent("homeFeatures")]);
+  // The admin won't save a home page pointing at a missing photo; the default library is only a
+  // last-resort fallback so a bad stored value can never blank a plate.
+  const plates = lines.map((line, i) => ({
+    ...line,
+    photo: photos.find((p) => p.id === featureIds[i]) ?? defaultPhotos.find((p) => p.id === featureIds[i]) ?? photos[i],
+  }));
+
   return (
     <>
       <Hero />
@@ -105,7 +112,7 @@ export default function HomePage() {
             </p>
           </div>
           <div className="mt-16 grid gap-12 md:mt-20 md:grid-cols-3 md:gap-8">
-            {lines.map((line, i) => (
+            {plates.map((line, i) => (
               <div key={line.title} className={i === 1 ? "md:mt-20" : undefined}>
                 <PhotoPlate photo={line.photo} priority={i === 0} />
                 <h3 className="mt-6 font-display text-lg font-normal">{line.title}</h3>

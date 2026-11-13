@@ -9,6 +9,7 @@
 	//   RESEND_API_KEY, ORDER_EMAIL_FROM, ORDER_EMAIL_TO, SITE_URL   — interim email channel
 	//   WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_OWNER_NUMBER, WHATSAPP_TEMPLATE_NAME
 	//   ORDER_PHOTOS_PUBLIC_URL                                       — R2 bucket public base URL
+	//   ACCESS_TEAM_DOMAIN, ACCESS_AUD                                — Cloudflare Access, gates /admin (lib/cms/auth.ts)
 	"assets": {
 		"directory": ".open-next/assets",
 		"binding": "ASSETS"
@@ -42,6 +43,17 @@
 		{
 			"binding": "ORDERS",
 			"id": "800a90f73141432b91dc7453e2d5966f"
+		}
+	],
+	"d1_databases": [
+		// OpenNext's tag cache (so revalidatePath works after an /admin save) AND the /admin
+		// content itself, in its own `cms_content` table (lib/cms/store.ts). Free plan: capped, not billed.
+		// Create with: npx wrangler d1 create ocd-tag-cache
+		// then replace the id below with the one the command prints.
+		{
+			"binding": "NEXT_TAG_CACHE_D1",
+			"database_name": "ocd-tag-cache",
+			"database_id": "REPLACE-WITH-D1-DATABASE-ID"
 		}
 	],
 	"images": {

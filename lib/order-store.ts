@@ -2,6 +2,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import type { Ledger } from "@/lib/ledger";
 import type { OrderFormValues, WeddingOrderFormValues } from "@/lib/schemas";
 import type { ReferenceImage } from "@/lib/upload-schema";
+import { r2PublicBase } from "@/lib/r2-public";
 
 // Bindings declared in wrangler.jsonc — ORDERS (KV) and ORDER_PHOTOS (R2) are app data, kept
 // separate from OpenNext's own NEXT_INC_CACHE_R2_BUCKET (its ISR/data cache, not ours).
@@ -58,14 +59,7 @@ export async function getOrder(token: string): Promise<StoredOrder | null> {
  * dashboard, and that base URL set as ORDER_PHOTOS_PUBLIC_URL — see .dev.vars.example. */
 export async function savePhoto(token: string, file: File): Promise<ReferenceImage> {
   const { env } = await getCloudflareContext({ async: true });
-  const publicBase = env.ORDER_PHOTOS_PUBLIC_URL;
-  // The unset case throws below either way, but the .dev.vars.example placeholder is a non-empty
-  // string — pasted verbatim into a production secret by mistake, it would otherwise build a URL
-  // that looks fine and only fails once someone clicks the broken image link. Caught explicitly so
-  // it fails the same way "unset" does: loudly, at upload time.
-  if (!publicBase || publicBase.includes("REPLACE-ME")) {
-    throw new Error("ORDER_PHOTOS_PUBLIC_URL is not configured (still unset or the example placeholder)");
-  }
+  const publicBase = r2PublicBase(env);
 
   const ext = file.name.includes(".") ? file.name.split(".").pop() : "jpg";
   const key = `${token}/${crypto.randomUUID()}.${ext}`;
@@ -75,5 +69,5 @@ export async function savePhoto(token: string, file: File): Promise<ReferenceIma
     httpMetadata: { contentType: file.type || "application/octet-stream" },
   });
 
-  return { url: `${publicBase.replace(/\/$/, "")}/${key}`, name: file.name };
+  return { url: `${publicBase}/${key}`, name: file.name };
 }

@@ -30,3 +30,9 @@ WHATSAPP_TEMPLATE_NAME=new_order_notification
 # The ORDER_PHOTOS R2 bucket's public base URL (enable "public access" on the bucket in the
 # Cloudflare dashboard, e.g. via its r2.dev subdomain, or a custom domain — see lib/order-store.ts).
 ORDER_PHOTOS_PUBLIC_URL=https://pub-REPLACE-ME.r2.dev
+
+# --- /admin (Cloudflare Access) ----------------------------------------------------------------
+# Not needed locally — `next dev` bypasses the admin check. In production, both are required or
+# /admin stays locked (lib/cms/auth.ts). Zero Trust → Access → Applications → the OCD admin app.
+ACCESS_TEAM_DOMAIN=
+ACCESS_AUD=

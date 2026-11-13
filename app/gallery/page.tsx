@@ -3,7 +3,7 @@ import { SectionA } from "@/components/register-a";
 import { Reveal } from "@/components/reveal";
 import { GalleryGrid, type GalleryFilter } from "@/components/gallery-grid";
 import { ButtonLink } from "@/components/button";
-import { photos } from "@/content/data/photos";
+import { getContent } from "@/lib/cms/store";
 
 export const metadata: Metadata = {
   title: "Gallery",
@@ -22,6 +22,7 @@ export default async function GalleryPage({
   const initialFilter = validFilters.includes(category as GalleryFilter)
     ? (category as GalleryFilter)
     : "all";
+  const photos = await getContent("photos");
 
   return (
     <>

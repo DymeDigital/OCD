@@ -3,7 +3,7 @@ import { SectionA } from "@/components/register-a";
 import { Reveal } from "@/components/reveal";
 import { AutoCarousel } from "@/components/auto-carousel";
 import { ButtonLink } from "@/components/button";
-import { photos } from "@/content/data/photos";
+import { getContent } from "@/lib/cms/store";
 import { weddingTerms } from "@/content/data/terms";
 
 export const metadata: Metadata = {
@@ -13,7 +13,6 @@ export const metadata: Metadata = {
   alternates: { canonical: "/weddings" },
 };
 
-const weddingPhotos = photos.filter((p) => p.category === "wedding" && p.hero).slice(0, 6);
 
 const process = [
   {
@@ -42,7 +41,8 @@ const process = [
   },
 ];
 
-export default function WeddingsPage() {
+export default async function WeddingsPage() {
+  const weddingPhotos = (await getContent("photos")).filter((p) => p.category === "wedding" && p.hero).slice(0, 6);
   return (
     <>
       <Reveal>

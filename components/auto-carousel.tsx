@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useReducedMotion } from "framer-motion";
+import { photoSrc } from "@/lib/photo-src";
 
 type CarouselPhoto = { file: string; alt: string };
 
@@ -48,7 +49,7 @@ export function AutoCarousel({
       {photos.map((photo, i) => (
         <Image
           key={photo.file}
-          src={`/images/${photo.file}`}
+          src={photoSrc(photo)}
           alt={photo.alt}
           fill
           sizes="(min-width: 768px) 33vw, 100vw"

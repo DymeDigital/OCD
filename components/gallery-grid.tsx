@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import type { Photo } from "@/content/data/photos";
+import { photoSrc } from "@/lib/photo-src";
 
 // First filterable-grid pattern in the codebase (per CLAUDE.md §5, Register A stays photography-
 // led — no borders/boxes beyond the plate itself). Uses CSS multi-column masonry rather than
@@ -65,7 +66,7 @@ export function GalleryGrid({
             }`}
           >
             <Image
-              src={`/images/${photo.file}`}
+              src={photoSrc(photo)}
               alt={photo.alt}
               fill
               sizes="(min-width: 768px) 25vw, 50vw"

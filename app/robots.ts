@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      // /o/[token] pages already set `noindex` individually — this is belt-and-braces.
-      disallow: "/o/",
+      // /o/[token] and /admin already set `noindex` individually — this is belt-and-braces.
+      disallow: ["/o/", "/admin", "/api/admin"],
     },
     sitemap: "https://obsessivecupcakedisorder.co.za/sitemap.xml",
   };

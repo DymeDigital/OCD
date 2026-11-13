@@ -5,7 +5,7 @@ import { ButtonLink } from "@/components/button";
 import { AutoCarousel } from "@/components/auto-carousel";
 import { flavours } from "@/content/data/flavours";
 import { sizes, sizesFootnote } from "@/content/data/sizes";
-import { photos } from "@/content/data/photos";
+import { getContent } from "@/lib/cms/store";
 import { formatRange, PRICE_CONFIRM_NOTE } from "@/lib/pricing";
 
 export const metadata: Metadata = {
@@ -16,9 +16,9 @@ export const metadata: Metadata = {
 };
 
 const cakeFlavours = flavours.filter((f) => f.category === "cake" || f.category === "both");
-const cakePhotos = photos.filter((p) => p.category === "cake" && p.hero).slice(0, 5);
 
-export default function CakesPage() {
+export default async function CakesPage() {
+  const cakePhotos = (await getContent("photos")).filter((p) => p.category === "cake" && p.hero).slice(0, 5);
   return (
     <>
       <Reveal>

@@ -45,3 +45,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 worker-configuration.d.ts
+
+# /admin content snapshot, regenerated before every build (scripts/snapshot-cms.mjs)
+lib/cms/snapshot.generated.json

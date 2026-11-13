@@ -3,16 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predev": "node scripts/generate-cupcake-manifest.mjs && wrangler types",
+    "predev": "node scripts/generate-cupcake-manifest.mjs && node scripts/snapshot-cms.mjs --ensure && wrangler types",
     "dev": "next dev",
-    "prebuild": "node scripts/generate-cupcake-manifest.mjs && wrangler types",
+    "prebuild": "node scripts/generate-cupcake-manifest.mjs && node scripts/snapshot-cms.mjs --ensure && wrangler types",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "generate:cupcake-manifest": "node scripts/generate-cupcake-manifest.mjs",
-    "cf:build": "opennextjs-cloudflare build",
-    "cf:preview": "opennextjs-cloudflare build && wrangler dev",
-    "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
+    "cf:build": "node scripts/snapshot-cms.mjs && opennextjs-cloudflare build",
+    "cf:preview": "node scripts/snapshot-cms.mjs --ensure && opennextjs-cloudflare build && wrangler dev",
+    "cf:deploy": "node scripts/snapshot-cms.mjs && opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.7",

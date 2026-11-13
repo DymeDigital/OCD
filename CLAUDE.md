@@ -97,7 +97,7 @@ Originally scoped as a frontend-only demo (nothing persisted, nothing sent). Tha
 | Hero | **`<video>` element** | Plain HTML. No player library, no WebGL, no Three.js. |
 | Content data | **Typed TS files** in `/content/data/` | Per §8. Hand-authored from the client's PDFs. |
 | Submission | **Email (Resend) now; Meta WhatsApp Cloud API when its template clears** | Both send the baker a summary + private `/o/[token]` link. `lib/email.ts`, `lib/whatsapp.ts`. Email is interim-primary; see the submission-channels note below. |
-| Order/photo storage | **Cloudflare KV + R2** | One KV record per order (`lib/order-store.ts`), reference photos in an R2 bucket. Chosen over Supabase/Airtable: same account as hosting, no extra vendor, and the order-detail link means the baker never needs to browse a list. |
+| Order/photo storage | **Cloudflare KV + R2** (+ D1 for `/admin` content, §4) | One KV record per order (`lib/order-store.ts`), reference photos in an R2 bucket. Chosen over Supabase/Airtable: same account as hosting, no extra vendor, and the order-detail link means the baker never needs to browse a list. |
 | Deploy | **Cloudflare Workers** | `wrangler.jsonc` + `open-next.config.ts`. `npm run cf:deploy`. Prerequisites in `.dev.vars.example`: a Resend API key (interim email channel) and, when ready, a Meta WhatsApp Business Platform account with an approved `new_order_notification` template. |
 
 **Order form submission:** the full multi-step flow validates client-side, then `onSubmit` posts one multipart request (form fields + reference photos + anti-spam honeypot/timestamp) to `/api/submit-order`. The route re-validates against the same Zod schema, uploads photos to R2, saves the order to KV, then attempts the email send and (when configured) the WhatsApp send — the KV write happens *before* either send, so a durable order and working `/o/[token]` link exist even if both fail. On success (either channel delivered) the client routes to `/order/thank-you?token=…`; otherwise the form renders `<SubmitFallback>` in place — the order as copyable text plus a `wa.me` deep link — rather than a dead end, and the localStorage draft is kept until a submission actually succeeds.
@@ -108,7 +108,18 @@ File uploads: client-side constraints live in `lib/upload-constraints.ts` (also 
 
 - **A verified Resend sending domain** — email currently sends from Resend's shared `onboarding@resend.dev` test sender, which only delivers to the address that owns the Resend account. Verifying a domain lets it send from `orders@<domain>` to anyone; only `ORDER_EMAIL_FROM` changes.
 - **The client's own SMTP** — not planned; Resend covers it.
-- **Keystatic** so the client can edit flavours, sizes, prices and availability herself without a code change.
+- **Pricing data in `/admin`** — flavours, sizes, fillings, design tiers. The admin (below) is built so this is new entries in `lib/cms/registry.ts` plus their editor UI; no new storage, routes or auth.
+
+### Client admin (`/admin`) — live
+
+The client edits site photography without a code change or redeploy. Replaced the earlier Keystatic idea: no GitHub account for the client, and edits live in seconds.
+
+- **What's editable (first build):** the photo library (`photos` — feeds `/gallery` and the `/cakes`, `/cupcakes`, `/weddings` carousels), the 3 home-page plates (`homeFeatures`), the About carousel (`aboutPhotos`). Each is one entry in `lib/cms/registry.ts`: Zod schema, static default from `content/data/*`, and the public paths to refresh.
+- **Storage:** content as JSON rows in D1 (`cms_content` table, `lib/cms/store.ts`) — D1, not KV, because it's strongly consistent and gives an atomic version check (a stale save is a 409, never a silent overwrite). Uploaded images in the `ORDER_PHOTOS` R2 bucket under `site/` (`lib/cms/media.ts`), resized to WebP in the browser first (`lib/cms/prepare-image.ts`). Nothing saved → the static default shows; "reset to original" deletes the row.
+- **Pages stay static.** A save calls `revalidatePath` for the affected pages, backed by OpenNext's D1 tag cache (`open-next.config.ts`; same D1 database, binding `NEXT_TAG_CACHE_D1`). Never `force-dynamic` them — that would put a full render on every visit, over the Workers Free CPU limit.
+- **Builds read production content:** `cf:build`/`cf:deploy` run `scripts/snapshot-cms.mjs` first, which copies the saved rows from production D1 into `lib/cms/snapshot.generated.json` (gitignored) for `next build` to prerender with. It stops the deploy if it can't read D1, rather than reverting the client's edits to the defaults.
+- **Auth:** Cloudflare Access (one-time PIN to the client's email) on `/admin*` and `/api/admin*`, *and* the Access JWT re-verified in `lib/cms/auth.ts` (`ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` secrets). Fails closed when unset; bypassed only under `next dev`.
+- Image references are `Photo.file`: a `public/images/` path or an absolute R2 URL. Always render through `photoSrc()` (`lib/photo-src.ts`).
 
 Keep dependencies boring and few. No component library — the design is specific enough that a generic kit will fight us.
 
@@ -222,6 +233,7 @@ Total under 1.2s. Ease `cubic-bezier(0.16, 1, 0.3, 1)`. Below the fold: single s
 /order/wedding        Wedding cake order form
 /order/thank-you      Confirmation + what happens next + link to the order below
 /o/[token]            Private per-order receipt (§9) — noindex, not in navigation, WhatsApp-only
+/admin                Client photo editor (§4) — noindex, not in navigation, behind Cloudflare Access
 /about                The baker's story, the obsessive-precision angle
 /faq                  Lead times, delivery areas, deposits, changes, allergens
 /contact              WhatsApp, email, Instagram, service area

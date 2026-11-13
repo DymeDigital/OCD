@@ -5,7 +5,7 @@ import { ButtonLink } from "@/components/button";
 import { AutoCarousel } from "@/components/auto-carousel";
 import { Disclosure, DisclosureTrigger, DisclosureContent } from "@/components/expandable";
 import { ReviewsSection } from "@/components/reviews-section";
-import { aboutPhotos } from "@/content/data/photos";
+import { getContent } from "@/lib/cms/store";
 
 export const metadata: Metadata = {
   title: "About",
@@ -13,7 +13,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/about" },
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const aboutPhotos = await getContent("aboutPhotos");
   return (
     <>
       <Reveal>
